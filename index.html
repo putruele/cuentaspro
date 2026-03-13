@@ -1748,6 +1748,8 @@ REGLAS IMPORTANTES:
       const partes = numeroLimpio.split(/[-\/]/);
       numeroLimpio = partes[partes.length - 1]; // quedarse solo con la última parte
     }
+    // Quitar ceros adelante
+    numeroLimpio = String(parseInt(numeroLimpio, 10) || 0) === "0" ? numeroLimpio : String(parseInt(numeroLimpio, 10));
 
     const mov = { id: ++nextId, tipo: d.tipo || "fc", monto: parseFloat(d.monto) || 0, numero: numeroLimpio, descripcion: d.descripcion || "", fecha: fechaStr };
 
