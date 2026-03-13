@@ -6,10 +6,10 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b1120" />
   <title>CuentasPro</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
+  <!-- Firebase SDK versión compat (no requiere type=module) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyAq72ssQANQKv8MQhQVfJzvAZtB-xVGP5M",
       authDomain: "cuentaspro-9f76e.firebaseapp.com",
@@ -19,21 +19,13 @@
       appId: "1:522685591644:web:d83f8ddddf74c7df737699"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    // Exponer funciones de DB al scope global
-    window._db = db;
-    window._dbDoc   = doc;
-    window._dbGet   = getDoc;
-    window._dbSet   = setDoc;
-    window._dbListen = onSnapshot;
-
-    // Cargar datos al iniciar
     window._cargarDatos = async () => {
       try {
-        const snap = await getDoc(doc(db, "datos", "principal"));
-        if (snap.exists()) {
+        const snap = await db.collection("datos").doc("principal").get();
+        if (snap.exists) {
           const d = snap.data();
           if (d.proveedores) window._proveedoresDB = d.proveedores;
           if (d.movimientos) window._movimientosDB = d.movimientos;
@@ -43,14 +35,10 @@
         }
       } catch(e) { console.error("Error cargando datos:", e); }
     };
-    // Señal de que Firebase está listo
-    window._firebaseReady = true;
-    document.dispatchEvent(new Event("firebaseReady"));
 
-    // Guardar datos
     window._guardarDatos = async (proveedores, movimientos, estados, nextId) => {
       try {
-        await setDoc(doc(db, "datos", "principal"), {
+        await db.collection("datos").doc("principal").set({
           proveedores, movimientos, estados, nextId,
           empresa: sessionStorage.getItem("cp_empresa") || "",
           updatedAt: new Date().toISOString()
@@ -58,12 +46,14 @@
       } catch(e) { console.error("Error guardando datos:", e); }
     };
 
-    // Escuchar cambios en tiempo real
     window._escucharCambios = (callback) => {
-      return onSnapshot(doc(db, "datos", "principal"), (snap) => {
-        if (snap.exists()) callback(snap.data());
+      return db.collection("datos").doc("principal").onSnapshot((snap) => {
+        if (snap.exists) callback(snap.data());
       });
     };
+
+    window._firebaseReady = true;
+    document.dispatchEvent(new Event("firebaseReady"));
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
