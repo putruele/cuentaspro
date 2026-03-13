@@ -1656,7 +1656,7 @@
     const file = input.files[0];
     input.value = "";
 
-    const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyBYB1XsdONxPbtcw6Fu913MAl64BLIXhp4";
+    const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCrecwA04mPSPqNi1IOk8cNZYieu8kt5k4";
     if (!apiKey) return showToast("⚙️ Configurá tu API Key de Gemini primero", "error");
 
     showToast("⏳ Analizando comprobante...", "ok");
@@ -1867,7 +1867,7 @@ REGLAS IMPORTANTES:
     }
 
     try {
-      const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyBYB1XsdONxPbtcw6Fu913MAl64BLIXhp4";
+      const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCrecwA04mPSPqNi1IOk8cNZYieu8kt5k4";
       if (!apiKey) {
         document.getElementById("foto-fc-error").textContent = "⚙️ Necesitás configurar tu API Key de Google Gemini. Tocá el ícono ⚙️ en el header.";
         document.getElementById("foto-fc-error").style.display = "block";
