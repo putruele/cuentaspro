@@ -24,31 +24,81 @@
 
     window._cargarDatos = async () => {
       try {
-        const snap = await db.collection("datos").doc("principal").get();
-        if (snap.exists) {
-          const d = snap.data();
-          if (d.proveedores) window._proveedoresDB = d.proveedores;
-          if (d.movimientos) window._movimientosDB = d.movimientos;
-          if (d.estados)     window._estadosDB     = d.estados;
-          if (d.nextId)      window._nextIdDB      = d.nextId;
-          if (d.empresa)     sessionStorage.setItem("cp_empresa", d.empresa);
+        // Cargar config general (nextId, empresa, estados)
+        const snapCfg = await db.collection("config").doc("general").get();
+        if (snapCfg.exists) {
+          const d = snapCfg.data();
+          if (d.nextId)  window._nextIdDB  = d.nextId;
+          if (d.estados) window._estadosDB = d.estados;
+          if (d.empresa) sessionStorage.setItem("cp_empresa", d.empresa);
         }
+        // Cargar todos los proveedores
+        const snapProvs = await db.collection("proveedores").get();
+        window._proveedoresDB = [];
+        window._movimientosDB = {};
+        snapProvs.forEach(doc => {
+          const d = doc.data();
+          window._proveedoresDB.push(d.info);
+          if (d.movimientos) window._movimientosDB[d.info.id] = d.movimientos;
+        });
       } catch(e) { console.error("Error cargando datos:", e); }
     };
 
     window._guardarDatos = async (proveedores, movimientos, estados, nextId) => {
       try {
-        await db.collection("datos").doc("principal").set({
-          proveedores, movimientos, estados, nextId,
+        const batch = db.batch();
+        // Guardar config general
+        batch.set(db.collection("config").doc("general"), {
+          nextId, estados,
           empresa: sessionStorage.getItem("cp_empresa") || "",
           updatedAt: new Date().toISOString()
         });
+        // Guardar cada proveedor en su propio documento
+        proveedores.forEach(prov => {
+          const ref = db.collection("proveedores").doc(String(prov.id));
+          batch.set(ref, {
+            info: prov,
+            movimientos: movimientos[prov.id] || []
+          });
+        });
+        await batch.commit();
       } catch(e) { console.error("Error guardando datos:", e); }
     };
 
+    window._guardarProveedor = async (prov, movs, estados, nextId) => {
+      try {
+        const batch = db.batch();
+        batch.set(db.collection("proveedores").doc(String(prov.id)), {
+          info: prov,
+          movimientos: movs || []
+        });
+        batch.set(db.collection("config").doc("general"), {
+          nextId, estados,
+          empresa: sessionStorage.getItem("cp_empresa") || "",
+          updatedAt: new Date().toISOString()
+        });
+        await batch.commit();
+      } catch(e) { console.error("Error guardando proveedor:", e); }
+    };
+
+    window._eliminarProveedor = async (provId) => {
+      try {
+        await db.collection("proveedores").doc(String(provId)).delete();
+      } catch(e) { console.error("Error eliminando proveedor:", e); }
+    };
+
     window._escucharCambios = (callback) => {
-      return db.collection("datos").doc("principal").onSnapshot((snap) => {
-        if (snap.exists) callback(snap.data());
+      // Escuchar cambios en config general
+      return db.collection("config").doc("general").onSnapshot(async () => {
+        const snapProvs = await db.collection("proveedores").get();
+        const provs = [], movs = {};
+        snapProvs.forEach(doc => {
+          const d = doc.data();
+          provs.push(d.info);
+          if (d.movimientos) movs[d.info.id] = d.movimientos;
+        });
+        const snapCfg = await db.collection("config").doc("general").get();
+        callback({ proveedores: provs, movimientos: movs, ...(snapCfg.exists ? snapCfg.data() : {}) });
       });
     };
 
@@ -976,7 +1026,7 @@
     guardarEnFirebase();
   }
 
-  // Guardar todo en Firebase (debounced 800ms para no saturar)
+  // Guardar todo en Firebase (debounced 800ms)
   let _saveTimer = null;
   function guardarEnFirebase() {
     if (!window._guardarDatos) return;
@@ -984,6 +1034,17 @@
     _saveTimer = setTimeout(() => {
       const estados = getEstados();
       window._guardarDatos(proveedores, movimientos, estados, nextId);
+    }, 800);
+  }
+
+  // Guardar solo el proveedor actualmente seleccionado (más rápido)
+  function guardarProveedorActual() {
+    if (!window._guardarProveedor || !selectedId) return guardarEnFirebase();
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      const prov = proveedores.find(p => p.id === selectedId);
+      if (!prov) return;
+      window._guardarProveedor(prov, movimientos[selectedId] || [], getEstados(), nextId);
     }, 800);
   }
 
@@ -1203,7 +1264,7 @@
     document.getElementById("modal-confirmar-pago").classList.remove("open");
     renderMovimientos();
     showToast("Facturas marcadas como pagadas ✓");
-    guardarEnFirebase();
+    guardarProveedorActual();
   }
 
   function confirmarRegistrarPago() {
@@ -1263,7 +1324,7 @@
     document.getElementById("modal-confirmar-pago").classList.remove("open");
     openDetalle(selectedId);
     showToast("Pago registrado y facturas marcadas ✓");
-    guardarEnFirebase();
+    guardarProveedorActual();
   }
 
   function imprimirAprobado() {
@@ -1380,7 +1441,7 @@
     movs.splice(idx, 1);
     openDetalle(selectedId);
     showToast("Movimiento eliminado");
-    guardarEnFirebase();
+    guardarProveedorActual();
   }
 
   function openModalProveedor() {
@@ -1435,12 +1496,15 @@
     }
     const p = proveedores.find(x => x.id === provAEliminarId);
     const nombre = p?.nombre || "Proveedor";
+    const idAEliminar = provAEliminarId;
     proveedores = proveedores.filter(x => x.id !== provAEliminarId);
     delete movimientos[provAEliminarId];
     // Limpiar estados de FC del proveedor eliminado
     const e = getEstados();
     Object.keys(e).forEach(k => { if (k.startsWith("fc_") || k.startsWith("pago_fcs_")) delete e[k]; });
     setEstados(e);
+    // Eliminar documento de Firebase
+    if (window._eliminarProveedor) window._eliminarProveedor(idAEliminar);
     closeModalEliminarProv();
     renderProveedores();
     showToast(`${nombre} eliminado`, "ok");
@@ -1459,7 +1523,7 @@
       closeModalProveedor();
       openDetalle(selectedId);
       showToast("Proveedor actualizado ✓");
-      guardarEnFirebase();
+      guardarProveedorActual();
     } else {
       const id = ++nextId;
       proveedores.push({ id, nombre, cuit, direccion, obs, saldo: 0 });
@@ -1472,7 +1536,7 @@
       } else {
         renderProveedores();
         showToast("Proveedor agregado ✓");
-        guardarEnFirebase();
+        guardarProveedorActual();
       }
     }
   }
@@ -1602,7 +1666,7 @@
       closeModalMovimiento();
       openDetalle(selectedId);
       showToast("Movimiento actualizado ✓");
-      guardarEnFirebase();
+      guardarProveedorActual();
     } else {
       // NUEVO movimiento — verificar duplicado para FC y ND
       const numero = document.getElementById("mov-numero").value.trim();
@@ -1638,7 +1702,7 @@
       closeModalMovimiento();
       openDetalle(selectedId);
       showToast(cfg.label + " registrada ✓");
-      guardarEnFirebase();
+      guardarProveedorActual();
     }
   }
 
