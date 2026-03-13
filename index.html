@@ -1899,6 +1899,7 @@
         closeModalRestore();
         renderProveedores();
         showToast("Backup restaurado ✓");
+        guardarEnFirebase();
       } catch(err) {
         showToast("Archivo inválido o corrupto", "error");
       }
@@ -2122,12 +2123,15 @@
     closeModalXLS();
     renderProveedores();
 
-    if (importados > 0 && errores === 0)
+    if (importados > 0 && errores === 0) {
       showToast(`${importados} proveedor${importados > 1 ? "es" : ""} importado${importados > 1 ? "s" : ""} ✓`);
-    else if (importados > 0)
+      guardarEnFirebase();
+    } else if (importados > 0) {
       showToast(`${importados} importados, ${errores} con error`, "error");
-    else
+      guardarEnFirebase();
+    } else {
       showToast("No se pudo importar ningún archivo", "error");
+    }
   }
 
   function parseMonto(val) {
