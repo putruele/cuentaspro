@@ -862,7 +862,6 @@
       await window._cargarDatos();
       if (window._proveedoresDB) proveedores = window._proveedoresDB;
       if (window._movimientosDB) {
-        // Firestore convierte keys a string, hay que mantenerlas como número
         const m = window._movimientosDB;
         movimientos = {};
         Object.keys(m).forEach(k => { movimientos[Number(k)] = m[k]; });
@@ -872,9 +871,11 @@
     }
     document.getElementById("spinner-carga").style.display = "none";
     renderProveedores();
-    // Escuchar cambios en tiempo real (si otro usuario modifica datos)
+    // Escuchar cambios en tiempo real — solo actualiza si NO hay guardado propio en curso
     if (window._escucharCambios && !_unsubscribe) {
       _unsubscribe = window._escucharCambios((data) => {
+        // Si hay un guardado nuestro pendiente, ignorar el snapshot para no pisarnos
+        if (_saveTimer) return;
         if (data.proveedores) proveedores = data.proveedores;
         if (data.movimientos) {
           movimientos = {};
@@ -883,7 +884,8 @@
         if (data.estados) sessionStorage.setItem("cp_estados", JSON.stringify(data.estados));
         if (data.nextId)  nextId = data.nextId;
         renderProveedores();
-        if (selectedId) openDetalle(selectedId);
+        // Solo recargar detalle si no hay FC siendo aprobadas ahora
+        if (selectedId && facturasAprobadas.size === 0) openDetalle(selectedId);
       });
     }
   }
@@ -1023,7 +1025,13 @@
   }
   function setEstados(obj) {
     sessionStorage.setItem("cp_estados", JSON.stringify(obj));
-    guardarEnFirebase();
+    // Guardar estados en Firebase de inmediato (sin debounce) para que persistan
+    if (window._guardarProveedor && selectedId) {
+      const prov = proveedores.find(p => p.id === selectedId);
+      if (prov) window._guardarProveedor(prov, movimientos[selectedId] || [], obj, nextId);
+    } else if (window._guardarDatos) {
+      window._guardarDatos(proveedores, movimientos, obj, nextId);
+    }
   }
 
   // Guardar todo en Firebase (debounced 800ms)
