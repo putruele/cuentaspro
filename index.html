@@ -310,6 +310,11 @@
 
 <!-- APP -->
 <div id="app">
+  <!-- Spinner de carga inicial -->
+  <div id="spinner-carga" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+    <div style="font-size:2rem">⏳</div>
+    <div style="color:var(--muted);font-size:.95rem">Cargando datos...</div>
+  </div>
   <header class="app-header">
     <div class="app-logo">Cuentas<span>Pro</span></div>
     <div class="header-menu">
@@ -758,7 +763,7 @@
         document.getElementById("app").style.display = "flex";
         document.getElementById("login-error").textContent = "";
         // Mostrar spinner mientras carga Firebase
-        document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
+        document.getElementById("spinner-carga").style.display = "flex";
         cargarDesdeFB();
       } catch(e) {
         console.error("Error al entrar:", e);
@@ -784,6 +789,7 @@
       if (window._estadosDB) sessionStorage.setItem("cp_estados", JSON.stringify(window._estadosDB));
       if (window._nextIdDB)  nextId = window._nextIdDB;
     }
+    document.getElementById("spinner-carga").style.display = "none";
     renderProveedores();
     // Escuchar cambios en tiempo real (si otro usuario modifica datos)
     if (window._escucharCambios && !_unsubscribe) {
@@ -843,7 +849,7 @@
   }
 
   function renderProveedores() {
-    const filtro = document.getElementById("input-buscar").value.toLowerCase();
+    const filtro = (document.getElementById("input-buscar")?.value || "").toLowerCase();
     let filtered = proveedores.filter(p => p.nombre.toLowerCase().includes(filtro));
 
     // Filtro FC aprobadas
@@ -1900,7 +1906,7 @@
     reader.readAsText(archivoRestore);
   }
 
-  if (logueado) renderProveedores();
+  // La carga inicial la maneja cargarDesdeFB() via evento firebaseReady
 </script>
 
 <!-- SheetJS para leer XLS -->
@@ -2142,7 +2148,7 @@
       if (logueado) {
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("app").style.display = "flex";
-        document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
+        document.getElementById("spinner-carga").style.display = "flex";
       }
     } catch(e) { console.error("Error al inicializar:", e); }
   });
