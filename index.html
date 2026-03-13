@@ -43,6 +43,9 @@
         }
       } catch(e) { console.error("Error cargando datos:", e); }
     };
+    // Señal de que Firebase está listo
+    window._firebaseReady = true;
+    document.dispatchEvent(new Event("firebaseReady"));
 
     // Guardar datos
     window._guardarDatos = async (proveedores, movimientos, estados, nextId) => {
@@ -761,7 +764,11 @@
         document.getElementById("login-error").textContent = "";
         // Mostrar spinner mientras carga Firebase
         document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
-        cargarDesdeFB();
+        if (window._firebaseReady) {
+          cargarDesdeFB();
+        } else {
+          document.addEventListener("firebaseReady", cargarDesdeFB, { once: true });
+        }
       } catch(e) {
         console.error("Error al entrar:", e);
         alert("Error al cargar la app: " + e.message);
@@ -2146,7 +2153,11 @@
         document.getElementById("app").style.display = "flex";
         document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
         // Esperar a que Firebase SDK esté listo
-        setTimeout(cargarDesdeFB, 500);
+        if (window._firebaseReady) {
+          cargarDesdeFB();
+        } else {
+          document.addEventListener("firebaseReady", cargarDesdeFB, { once: true });
+        }
       }
     } catch(e) {
       console.error("Error al inicializar:", e);
