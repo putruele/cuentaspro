@@ -53,7 +53,12 @@
     };
 
     window._firebaseReady = true;
-    document.dispatchEvent(new Event("firebaseReady"));
+    // Disparar evento solo cuando el DOM esté listo
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => document.dispatchEvent(new Event("firebaseReady")));
+    } else {
+      document.dispatchEvent(new Event("firebaseReady"));
+    }
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
@@ -754,11 +759,7 @@
         document.getElementById("login-error").textContent = "";
         // Mostrar spinner mientras carga Firebase
         document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
-        if (window._firebaseReady) {
-          cargarDesdeFB();
-        } else {
-          document.addEventListener("firebaseReady", cargarDesdeFB, { once: true });
-        }
+        cargarDesdeFB();
       } catch(e) {
         console.error("Error al entrar:", e);
         alert("Error al cargar la app: " + e.message);
@@ -2135,24 +2136,20 @@
     return m ? m[0] : "";
   }
 
-  // Inicializar app cuando el DOM esté listo
+  // Inicializar app cuando el DOM y Firebase estén listos
   document.addEventListener("DOMContentLoaded", () => {
     try {
       if (logueado) {
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("app").style.display = "flex";
         document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
-        // Esperar a que Firebase SDK esté listo
-        if (window._firebaseReady) {
-          cargarDesdeFB();
-        } else {
-          document.addEventListener("firebaseReady", cargarDesdeFB, { once: true });
-        }
       }
-    } catch(e) {
-      console.error("Error al inicializar:", e);
-    }
+    } catch(e) { console.error("Error al inicializar:", e); }
   });
+
+  document.addEventListener("firebaseReady", () => {
+    if (logueado) cargarDesdeFB();
+  }, { once: true });
 </script>
 </body>
 </html>
