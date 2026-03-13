@@ -228,7 +228,7 @@
     .det-saldo-valor.favor { color: var(--green); }
     .det-saldo-valor.cero  { color: var(--muted); }
 
-    .det-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .det-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .btn-action { flex: 1; padding: 9px 4px; border: none; border-radius: 10px; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: inherit; text-align: center; }
     .btn-fc   { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
     .btn-fc:hover   { background: rgba(239,68,68,.25); }
@@ -425,12 +425,9 @@
       </div>
     </div>
     <div class="det-actions">
-      <button class="btn-action btn-fc"   onclick="openModalMovimiento('fc')">🧾 Factura</button>
-      <button class="btn-action btn-fc"   onclick="openModalMovimiento('nd')" style="background:rgba(245,158,11,.15);color:#fcd34d;border-color:rgba(245,158,11,.3)">📋 Nota Déb.</button>
-      <button class="btn-action btn-pago" onclick="openModalMovimiento('nc')">📝 Nota Créd.</button>
-      <button class="btn-action btn-pago" onclick="openModalMovimiento('ret')">🏛️ Retención</button>
+      <button class="btn-action btn-fc" onclick="openModalMovimiento('fc')">📥 Ingresar</button>
       <button class="btn-action" onclick="abrirCamaraFC()"
-        style="grid-column:span 2;background:rgba(168,85,247,.15);color:#d8b4fe;border-color:rgba(168,85,247,.3)">📷 Cargar FC por foto o PDF</button>
+        style="background:rgba(168,85,247,.15);color:#d8b4fe;border-color:rgba(168,85,247,.3)">📷 Cargar por foto/PDF</button>
     </div>
     <input type="file" id="input-foto-fc" accept="image/*,application/pdf" style="display:none" onchange="procesarFotoFC(this)" />
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
@@ -1014,6 +1011,11 @@
     document.getElementById("det-saldo-label").textContent = s > 0 ? "Saldo a pagar" : s < 0 ? "A favor de " + getNombreEmpresa() : "Sin saldo";
     showView("view-detalle");
     renderMovimientos();
+    // Scroll al último movimiento (más nuevo)
+    setTimeout(() => {
+      const lista = document.getElementById("lista-movimientos");
+      if (lista) lista.scrollTop = lista.scrollHeight;
+    }, 50);
   }
 
   function volverLista() { showView("view-proveedores"); renderProveedores(); }
