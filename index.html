@@ -191,7 +191,7 @@
     .movimiento-row.fc-linked { background: rgba(251,191,36,.08) !important; border-color: rgba(251,191,36,.5) !important; box-shadow: 0 0 0 2px rgba(251,191,36,.15); transform: translateX(3px); }
     .movimiento-row.pago-hover { background: rgba(99,102,241,.12) !important; border-color: rgba(99,102,241,.5) !important; }
     .mov-icon { font-size: 1.1rem; flex-shrink: 0; }
-    .mov-info { flex: 1; min-width: 0; }
+    .mov-info { flex: 1; min-width: 0; max-width: 420px; }
     .mov-tipo { font-weight: 600; font-size: .82rem; display: flex; align-items: center; gap: 6px; }
     .mov-fecha { color: var(--muted); font-size: .72rem; margin-top: 1px; }
     .mov-monto { font-family: "Syne", sans-serif; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
@@ -1061,19 +1061,20 @@
       return `<div class="movimiento-row ${rowCls}" id="mov-row-${m.id}">
         ${checkIzq}
         <div class="mov-icon">${cfg.icon}</div>
-        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:38px;margin-right:4px">
-          <div style="font-size:.7rem;color:var(--muted);line-height:1.2;text-align:center">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
-          <div style="font-size:.68rem;color:var(--muted);opacity:.7">${(m.fecha||"").split("/")[2]||""}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:34px;margin-right:2px">
+          <div style="font-size:.68rem;color:var(--muted);line-height:1.2;text-align:center">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
+          <div style="font-size:.65rem;color:var(--muted);opacity:.7">${(m.fecha||"").split("/")[2]||""}</div>
         </div>
         <div class="mov-info">
           <div class="mov-tipo">${cfg.label}${m.numero ? " N°" + fmtNumFC(m.numero) : ""} ${badge}</div>
           <div class="mov-fecha">${m.descripcion || ""}</div>
           ${vinculo}${vinculoPago}
         </div>
+        <div style="flex:1"></div>
         <div class="mov-monto ${clsMonto}" style="flex-shrink:0;margin-left:6px;display:flex;align-items:center">${signo}${fmt(m.monto)}</div>
-        <div style="flex-shrink:0;margin-left:14px;padding-left:14px;border-left:1px solid var(--border);text-align:right;min-width:80px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
-          <div style="font-size:.68rem;color:var(--muted);margin-bottom:1px">saldo</div>
-          <div style="font-size:.78rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
+        <div style="flex-shrink:0;margin-left:12px;padding-left:12px;border-left:1px solid var(--border);text-align:right;min-width:80px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
+          <div style="font-size:.65rem;color:var(--muted);margin-bottom:1px">saldo</div>
+          <div style="font-size:.75rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
         </div>
         <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
           ${(estado !== "pagada" || m.tipo === "pago") ? `<button class="mov-delete" title="Editar" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3)">✏️</button>` : ""}
