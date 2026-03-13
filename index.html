@@ -6,6 +6,62 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b1120" />
   <title>CuentasPro</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAq72ssQANQKv8MQhQVfJzvAZtB-xVGP5M",
+      authDomain: "cuentaspro-9f76e.firebaseapp.com",
+      projectId: "cuentaspro-9f76e",
+      storageBucket: "cuentaspro-9f76e.firebasestorage.app",
+      messagingSenderId: "522685591644",
+      appId: "1:522685591644:web:d83f8ddddf74c7df737699"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // Exponer funciones de DB al scope global
+    window._db = db;
+    window._dbDoc   = doc;
+    window._dbGet   = getDoc;
+    window._dbSet   = setDoc;
+    window._dbListen = onSnapshot;
+
+    // Cargar datos al iniciar
+    window._cargarDatos = async () => {
+      try {
+        const snap = await getDoc(doc(db, "datos", "principal"));
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d.proveedores) window._proveedoresDB = d.proveedores;
+          if (d.movimientos) window._movimientosDB = d.movimientos;
+          if (d.estados)     window._estadosDB     = d.estados;
+          if (d.nextId)      window._nextIdDB      = d.nextId;
+          if (d.empresa)     sessionStorage.setItem("cp_empresa", d.empresa);
+        }
+      } catch(e) { console.error("Error cargando datos:", e); }
+    };
+
+    // Guardar datos
+    window._guardarDatos = async (proveedores, movimientos, estados, nextId) => {
+      try {
+        await setDoc(doc(db, "datos", "principal"), {
+          proveedores, movimientos, estados, nextId,
+          empresa: sessionStorage.getItem("cp_empresa") || "",
+          updatedAt: new Date().toISOString()
+        });
+      } catch(e) { console.error("Error guardando datos:", e); }
+    };
+
+    // Escuchar cambios en tiempo real
+    window._escucharCambios = (callback) => {
+      return onSnapshot(doc(db, "datos", "principal"), (snap) => {
+        if (snap.exists()) callback(snap.data());
+      });
+    };
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -703,7 +759,9 @@
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("app").style.display = "flex";
         document.getElementById("login-error").textContent = "";
-        renderProveedores();
+        // Mostrar spinner mientras carga Firebase
+        document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
+        cargarDesdeFB();
       } catch(e) {
         console.error("Error al entrar:", e);
         alert("Error al cargar la app: " + e.message);
@@ -712,6 +770,36 @@
       document.getElementById("login-error").textContent = "Usuario o contraseña incorrectos";
       document.getElementById("inp-pass").value = "";
       document.getElementById("inp-pass").focus();
+    }
+  }
+
+  async function cargarDesdeFB() {
+    if (window._cargarDatos) {
+      await window._cargarDatos();
+      if (window._proveedoresDB) proveedores = window._proveedoresDB;
+      if (window._movimientosDB) {
+        // Firestore convierte keys a string, hay que mantenerlas como número
+        const m = window._movimientosDB;
+        movimientos = {};
+        Object.keys(m).forEach(k => { movimientos[Number(k)] = m[k]; });
+      }
+      if (window._estadosDB) sessionStorage.setItem("cp_estados", JSON.stringify(window._estadosDB));
+      if (window._nextIdDB)  nextId = window._nextIdDB;
+    }
+    renderProveedores();
+    // Escuchar cambios en tiempo real (si otro usuario modifica datos)
+    if (window._escucharCambios && !_unsubscribe) {
+      _unsubscribe = window._escucharCambios((data) => {
+        if (data.proveedores) proveedores = data.proveedores;
+        if (data.movimientos) {
+          movimientos = {};
+          Object.keys(data.movimientos).forEach(k => { movimientos[Number(k)] = data.movimientos[k]; });
+        }
+        if (data.estados) sessionStorage.setItem("cp_estados", JSON.stringify(data.estados));
+        if (data.nextId)  nextId = data.nextId;
+        renderProveedores();
+        if (selectedId) openDetalle(selectedId);
+      });
     }
   }
 
@@ -729,35 +817,12 @@
   }
 
   // ——— DATOS DE PRUEBA ———
-  let proveedores = [
-    { id: 1, nombre: "Distribuidora López",     cuit: "20-28456789-3", saldo: 154320.50 },
-    { id: 2, nombre: "Frigorífico del Sur S.A.", cuit: "30-71234567-8", saldo: 89000.00 },
-    { id: 3, nombre: "Lácteos Pampeanos",        cuit: "20-34567890-1", saldo: -12500.00 },
-    { id: 4, nombre: "Importadora Nórdica",      cuit: "30-68901234-5", saldo: 0 },
-    { id: 5, nombre: "El Molino Harinero",       cuit: "20-19876543-2", saldo: 230750.75 },
-    { id: 6, nombre: "Bebidas del Litoral",      cuit: "30-55443322-1", saldo: 45600.00 },
-  ];
-  let movimientos = {
-    1: [
-      { id: 101, tipo: "fc",   monto: 200000,   numero: "0001-00004521", descripcion: "FC septiembre", fecha: "15/02/2026" },
-      { id: 102, tipo: "pago", monto: 80000,    numero: "",              descripcion: "Pago parcial",  fecha: "20/02/2026" },
-      { id: 103, tipo: "fc",   monto: 34320.50, numero: "0001-00004689", descripcion: "FC octubre",    fecha: "05/03/2026" },
-    ],
-    2: [
-      { id: 201, tipo: "fc",   monto: 120000, numero: "0002-00001122", descripcion: "Carne vacuna", fecha: "10/02/2026" },
-      { id: 202, tipo: "pago", monto: 31000,  numero: "",              descripcion: "",              fecha: "01/03/2026" },
-    ],
-    3: [
-      { id: 301, tipo: "fc",   monto: 50000, numero: "0003-00000891", descripcion: "Quesos y cremas",       fecha: "28/01/2026" },
-      { id: 302, tipo: "pago", monto: 62500, numero: "",              descripcion: "Pago total + adelanto", fecha: "15/02/2026" },
-    ],
-    4: [],
-    5: [{ id: 501, tipo: "fc", monto: 230750.75, numero: "0005-00002234", descripcion: "Harina 000 y 0000", fecha: "01/03/2026" }],
-    6: [{ id: 601, tipo: "fc", monto: 45600,     numero: "0006-00003310", descripcion: "Gaseosas y agua",   fecha: "08/03/2026" }],
-  };
+  let proveedores = [];
+  let movimientos = {};
   let nextId = 1000;
   let selectedId = null;
   let tipoMov = "fc";
+  let _unsubscribe = null; // listener de cambios en tiempo real
 
   const fmt = n => "$" + (n||0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -865,11 +930,25 @@
 
   let facturasAprobadas = new Set();
 
-  // Estado persistente en sessionStorage (simula "nube" para la demo)
+  // Estado persistente — usa Firebase si está disponible, sino sessionStorage
   function getEstados() {
     try { return JSON.parse(sessionStorage.getItem("cp_estados") || "{}"); } catch { return {}; }
   }
-  function setEstados(obj) { sessionStorage.setItem("cp_estados", JSON.stringify(obj)); }
+  function setEstados(obj) {
+    sessionStorage.setItem("cp_estados", JSON.stringify(obj));
+    guardarEnFirebase();
+  }
+
+  // Guardar todo en Firebase (debounced 800ms para no saturar)
+  let _saveTimer = null;
+  function guardarEnFirebase() {
+    if (!window._guardarDatos) return;
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      const estados = getEstados();
+      window._guardarDatos(proveedores, movimientos, estados, nextId);
+    }, 800);
+  }
 
   function getEstadoFactura(id) {
     return getEstados()[id] || "normal"; // "normal" | "aprobada" | "pagada"
@@ -1086,6 +1165,7 @@
     document.getElementById("modal-confirmar-pago").classList.remove("open");
     renderMovimientos();
     showToast("Facturas marcadas como pagadas ✓");
+    guardarEnFirebase();
   }
 
   function confirmarRegistrarPago() {
@@ -1145,6 +1225,7 @@
     document.getElementById("modal-confirmar-pago").classList.remove("open");
     openDetalle(selectedId);
     showToast("Pago registrado y facturas marcadas ✓");
+    guardarEnFirebase();
   }
 
   function imprimirAprobado() {
@@ -1229,6 +1310,7 @@
     movs.splice(idx, 1);
     openDetalle(selectedId);
     showToast("Movimiento eliminado");
+    guardarEnFirebase();
   }
 
   function openModalProveedor() {
@@ -1292,6 +1374,7 @@
     closeModalEliminarProv();
     renderProveedores();
     showToast(`${nombre} eliminado`, "ok");
+    guardarEnFirebase();
   }
   function guardarProveedor() {
     const nombre    = document.getElementById("prov-nombre").value.trim();
@@ -1306,6 +1389,7 @@
       closeModalProveedor();
       openDetalle(selectedId);
       showToast("Proveedor actualizado ✓");
+      guardarEnFirebase();
     } else {
       const id = ++nextId;
       proveedores.push({ id, nombre, cuit, direccion, obs, saldo: 0 });
@@ -1313,6 +1397,7 @@
       closeModalProveedor();
       renderProveedores();
       showToast("Proveedor agregado ✓");
+      guardarEnFirebase();
     }
   }
 
@@ -1441,6 +1526,7 @@
       closeModalMovimiento();
       openDetalle(selectedId);
       showToast("Movimiento actualizado ✓");
+      guardarEnFirebase();
     } else {
       // NUEVO movimiento — verificar duplicado para FC y ND
       const numero = document.getElementById("mov-numero").value.trim();
@@ -1476,6 +1562,7 @@
       closeModalMovimiento();
       openDetalle(selectedId);
       showToast(cfg.label + " registrada ✓");
+      guardarEnFirebase();
     }
   }
 
@@ -1733,6 +1820,7 @@
     renderProveedores();
     if (selectedId) openDetalle(selectedId);
     showToast("Configuración guardada ✓");
+    guardarEnFirebase();
   }
   function openModalBackup()  { document.getElementById("modal-backup").classList.add("open"); }
   function closeModalBackup() { document.getElementById("modal-backup").classList.remove("open"); }
@@ -2056,7 +2144,9 @@
       if (logueado) {
         document.getElementById("login-screen").style.display = "none";
         document.getElementById("app").style.display = "flex";
-        renderProveedores();
+        document.getElementById("view-proveedores").innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)">⏳ Cargando datos...</div>`;
+        // Esperar a que Firebase SDK esté listo
+        setTimeout(cargarDesdeFB, 500);
       }
     } catch(e) {
       console.error("Error al inicializar:", e);
