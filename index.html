@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b1120" />
+  <title>CuentasPro</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b1120; --surface: #111827; --surface2: #1a2336;
+      --border: #1f2e45; --accent: #3b82f6; --accent2: #60a5fa;
+      --red: #ef4444; --green: #22c55e; --yellow: #f59e0b;
+      --text: #f1f5f9; --muted: #64748b; --radius: 14px;
+      --vh: 1vh;
+    }
+    html { height: 100%; height: -webkit-fill-available; }
+    body { 
+      height: 100%; height: -webkit-fill-available;
+      font-family: "DM Sans", sans-serif; background: var(--bg); color: var(--text);
+      overflow: hidden; -webkit-tap-highlight-color: transparent;
+    }
+
+    /* LOGIN */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; min-height: -webkit-fill-available;
+      padding: 20px;
+      background: radial-gradient(ellipse at 60% 30%, #1e3a5f 0%, #0b1120 65%);
+    }
+    .login-logo { font-family: "Syne", sans-serif; font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .login-logo span { color: var(--accent2); }
+    .login-sub { color: var(--muted); font-size: .9rem; margin-bottom: 32px; text-align:center; }
+    .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 24px 20px; width: 100%; max-width: 360px; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; color: var(--muted); font-size: .82rem; margin-bottom: 6px; }
+    .form-group input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px; color: var(--text); font-size: 16px; outline: none; transition: border .15s; font-family: inherit; }
+    .form-group input:focus { border-color: var(--accent); }
+    .login-error { color: var(--red); font-size: .82rem; margin-bottom: 12px; min-height: 18px; }
+    .btn-login { width: 100%; padding: 15px; background: var(--accent); border: none; border-radius: 10px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s; font-family: inherit; }
+    .btn-login:active { background: var(--accent2); }
+
+    /* APP */
+    #app { display: none; flex-direction: column; height: 100vh; overflow: hidden; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .app-logo { font-family: "Syne", sans-serif; font-size: 1.2rem; font-weight: 800; }
+    .app-logo span { color: var(--accent2); }
+    .btn-logout { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: .78rem; font-family: inherit; }
+    .header-menu { display: flex; align-items: center; gap: 6px; }
+    .btn-menu { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 9px; cursor: pointer; font-size: .88rem; font-family: inherit; min-width: 36px; min-height: 36px; }
+
+    /* Modal backup */
+    .backup-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+    .backup-btn {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; cursor: pointer; transition: all .15s; width: 100%; text-align: left;
+    }
+    .backup-btn:hover { border-color: var(--accent); background: rgba(59,130,246,.08); }
+    .backup-btn .bb-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .backup-btn .bb-title { font-weight: 600; font-size: .95rem; display: block; }
+    .backup-btn .bb-sub { color: var(--muted); font-size: .8rem; margin-top: 2px; display: block; }
+
+    /* Modal restaurar */
+    .restore-warning { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); border-radius: 10px; padding: 12px 14px; color: var(--yellow); font-size: .85rem; margin-bottom: 16px; line-height: 1.5; }
+    .restore-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .restore-opt { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .restore-opt input[type=radio] { accent-color: var(--accent); width: 16px; height: 16px; }
+    .restore-opt span { font-size: .9rem; }
+    .file-drop {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 28px 20px;
+      text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 4px;
+    }
+    .file-drop:hover, .file-drop.drag { border-color: var(--accent); background: rgba(59,130,246,.06); }
+    .file-drop .fd-icon { font-size: 2rem; margin-bottom: 8px; }
+    .file-drop p { color: var(--muted); font-size: .88rem; }
+    .file-drop strong { color: var(--accent2); }
+    .file-selected { color: var(--green); font-size: .85rem; margin-top: 8px; display: none; }
+
+    .view { display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0; }
+    .view.active { display: flex; }
+    .view-header { padding: 14px 16px 10px; flex-shrink: 0; }
+    .summary-card { background: linear-gradient(135deg, #1e3a5f, #1a2336); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .summary-label { color: var(--muted); font-size: .82rem; margin-bottom: 2px; }
+    .summary-amount { font-family: "Syne", sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--yellow); }
+    .search-bar { display: flex; gap: 8px; align-items: center; }
+    .search-bar input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 16px; outline: none; font-family: inherit; }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--muted); }
+    .btn-fab { width: 44px; height: 44px; background: var(--accent); border: none; border-radius: 12px; color: white; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .scroll-area { flex: 1; overflow-y: auto; padding: 0 12px 20px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    .scroll-area::-webkit-scrollbar { width: 3px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .proveedor-card { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
+    .proveedor-card.deuda { border-left-color: var(--yellow); }
+    .proveedor-card.favor { border-left-color: var(--green); }
+    .proveedor-card.cero  { border-left-color: var(--muted); }
+    .prov-info { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .prov-avatar { width: 38px; height: 38px; min-width: 38px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: "Syne", sans-serif; font-weight: 700; color: var(--accent2); font-size: .9rem; }
+    .prov-nombre { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prov-sub { color: var(--muted); font-size: .75rem; margin-top: 2px; }
+    .prov-saldo { text-align: right; flex-shrink: 0; margin-left: 8px; }
+    .saldo-label { font-size: .68rem; display: block; }
+    .saldo-monto { font-family: "Syne", sans-serif; font-weight: 700; font-size: .92rem; }
+    .proveedor-card.deuda .saldo-label { color: rgba(245,158,11,.7); }
+    .proveedor-card.deuda .saldo-monto { color: var(--yellow); }
+    .proveedor-card.favor .saldo-label { color: rgba(34,197,94,.7); }
+    .proveedor-card.favor .saldo-monto { color: var(--green); }
+    .proveedor-card.cero  .saldo-label { color: var(--muted); }
+    .proveedor-card.cero  .saldo-monto { color: var(--muted); }
+
+    .det-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 16px; flex-shrink: 0; }
+    .det-back { display: flex; align-items: center; gap: 8px; color: var(--accent2); font-size: .88rem; cursor: pointer; margin-bottom: 10px; width: fit-content; }
+    .det-prov-info { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    #det-nombre { font-family: "Syne", sans-serif; font-size: 1.15rem; font-weight: 800; }
+    #det-cuit { color: var(--muted); font-size: .78rem; margin-top: 3px; }
+    .det-saldo-box { text-align: right; flex-shrink: 0; }
+    #det-saldo-label { color: var(--muted); font-size: .72rem; display: block; }
+    .det-saldo-valor { font-family: "Syne", sans-serif; font-size: 1.3rem; font-weight: 700; }
+    .det-saldo-valor.deuda { color: var(--yellow); }
+    .det-saldo-valor.favor { color: var(--green); }
+    .det-saldo-valor.cero  { color: var(--muted); }
+
+    .det-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .btn-action { flex: 1; padding: 9px 4px; border: none; border-radius: 10px; font-size: .78rem; font-weight: 600; cursor: pointer; font-family: inherit; text-align: center; }
+    .btn-fc   { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .btn-fc:hover   { background: rgba(239,68,68,.25); }
+    .btn-pago { background: rgba(34,197,94,.15); color: #86efac; border: 1px solid rgba(34,197,94,.3); }
+    .btn-pago:hover { background: rgba(34,197,94,.25); }
+
+    .mov-section-title { padding: 14px 20px 8px; font-family: "Syne", sans-serif; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; flex-shrink: 0; }
+    .movimiento-row { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; transition: all .15s; min-height: 64px; }
+    .movimiento-row:hover { background: var(--surface2); }
+    .movimiento-row.fc-linked { background: rgba(251,191,36,.08) !important; border-color: rgba(251,191,36,.5) !important; box-shadow: 0 0 0 2px rgba(251,191,36,.15); transform: translateX(3px); }
+    .movimiento-row.pago-hover { background: rgba(99,102,241,.12) !important; border-color: rgba(99,102,241,.5) !important; }
+    .mov-icon { font-size: 1.3rem; flex-shrink: 0; }
+    .mov-info { flex: 1; min-width: 0; }
+    .mov-tipo { font-weight: 600; font-size: .9rem; display: flex; align-items: center; gap: 6px; }
+    .mov-fecha { color: var(--muted); font-size: .78rem; margin-top: 2px; }
+    .mov-monto { font-family: "Syne", sans-serif; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
+    .mov-monto.fc   { color: #fca5a5; }
+    .mov-monto.pago { color: #86efac; }
+    .mov-delete { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 2px 6px; border-radius: 6px; transition: all .15s; }
+    .mov-delete:hover { color: var(--red); background: rgba(239,68,68,.1); }
+
+    /* ——— ESTADOS FACTURAS ——— */
+    .mov-check { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
+
+    /* Aprobada */
+    .movimiento-row.aprobada { background: rgba(59,130,246,.08); border-color: rgba(59,130,246,.35); }
+    .badge-aprobada { background: rgba(59,130,246,.2); color: var(--accent2); border-radius: 50px; padding: 2px 8px; font-size: .7rem; font-weight: 700; letter-spacing: .03em; }
+
+    /* Pagada */
+    .movimiento-row.pagada { background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.3); opacity: .85; }
+    .movimiento-row.pagada .mov-monto.fc { color: var(--muted); text-decoration: line-through; }
+    .badge-pagada { background: rgba(34,197,94,.2); color: #86efac; border-radius: 50px; padding: 2px 8px; font-size: .7rem; font-weight: 700; letter-spacing: .03em; }
+
+    /* Barra flotante */
+    .barra-aprobado {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: var(--surface); border-top: 2px solid var(--accent);
+      padding: 12px 16px 20px; animation: slideUp .2s ease;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.4);
+    }
+    .barra-aprobado.visible { display: block; }
+    .barra-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .barra-label { color: var(--muted); font-size: .82rem; }
+    .barra-monto { font-family: "Syne", sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--accent2); }
+    .barra-count { color: var(--muted); font-size: .78rem; }
+    .barra-actions { display: flex; gap: 8px; }
+    .btn-barra { flex: 1; padding: 10px; border: none; border-radius: 10px; font-size: .85rem; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .btn-barra-clear { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .btn-barra-clear:hover { border-color: var(--red); color: var(--red); }
+    .btn-barra-print { background: var(--accent); color: white; }
+    .btn-barra-print:hover { background: var(--accent2); }
+    .btn-barra-pagar { background: rgba(34,197,94,.2); color: #86efac; border: 1px solid rgba(34,197,94,.3); }
+    .btn-barra-pagar:hover { background: rgba(34,197,94,.35); }
+
+    /* Medios de pago */
+    .medio-opt {
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 8px; border-radius: 10px; font-size: .88rem; font-weight: 500;
+      background: var(--surface2); border: 2px solid var(--border);
+      cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .medio-opt:hover { border-color: var(--accent); }
+    .medio-opt.selected { border-color: var(--accent); background: rgba(59,130,246,.15); color: var(--accent2); font-weight: 700; }
+
+    /* Vinculación FC-Pago */
+    .vinculo-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; margin-top: 6px; font-size: .78rem; color: var(--muted);
+    }
+    .vinculo-box strong { color: var(--accent2); }
+
+    /* Print */
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { position: fixed; inset: 0; padding: 32px; background: white; color: black; font-family: sans-serif; }
+      .print-header { margin-bottom: 24px; border-bottom: 2px solid #000; padding-bottom: 12px; }
+      .print-title { font-size: 1.4rem; font-weight: 800; }
+      .print-sub { font-size: .85rem; color: #555; margin-top: 4px; }
+      .print-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      .print-table th { text-align: left; border-bottom: 1px solid #ccc; padding: 6px 8px; font-size: .82rem; color: #555; }
+      .print-table td { padding: 8px; border-bottom: 1px solid #eee; font-size: .9rem; }
+      .print-total { margin-top: 20px; text-align: right; font-size: 1.1rem; font-weight: 700; }
+    }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(4px); z-index: 100; align-items: flex-end; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 20px 20px 0 0; padding: 20px 16px 40px; width: 100%; max-width: 500px; animation: slideUp .25s ease; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-title { font-family: "Syne", sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+    .modal .form-group input,
+    .modal .form-group select,
+    .modal .form-group textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 16px; width: 100%; outline: none; transition: border .15s; font-family: inherit; }
+    .modal .form-group input:focus,
+    .modal .form-group select:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-cancel { flex: 1; padding: 13px; background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: .95rem; cursor: pointer; font-family: inherit; }
+    .btn-save { flex: 2; padding: 13px; background: var(--accent); border: none; border-radius: 10px; color: white; font-size: .95rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+    .empty-state small { font-size: .82rem; opacity: .7; display: block; margin-top: 6px; }
+
+    .toast { position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border); border-radius: 50px; padding: 10px 20px; font-size: .88rem; font-weight: 500; transition: bottom .3s ease; z-index: 999; white-space: nowrap; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+    .toast.show { bottom: 24px; }
+    .toast.ok    { border-color: var(--green); color: var(--green); }
+    .toast.error { border-color: var(--red);   color: var(--red); }
+
+    @media (min-width: 600px) {
+      .modal { border-radius: 20px; margin: auto; }
+      .modal-overlay { align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">Cuentas<span>Pro</span></div>
+  <p class="login-sub">Gestión de cuentas corrientes de proveedores</p>
+  <div class="login-box">
+    <div class="form-group"><label>Usuario</label><input id="inp-user" type="text" placeholder="Ingresá tu usuario" autocomplete="username" /></div>
+    <div class="form-group"><label>Contraseña</label><input id="inp-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="app-header">
+    <div class="app-logo">Cuentas<span>Pro</span></div>
+    <div class="header-menu">
+      <button class="btn-menu" onclick="openModalBusquedaGlobal()" title="Buscar comprobante">🔎</button>
+      <button class="btn-menu" onclick="openModalConfig()" title="Configuración">⚙️</button>
+      <button class="btn-menu" onclick="openModalBackup()" title="Backup">💾</button>
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <div class="view active" id="view-proveedores">
+    <div class="view-header">
+      <div class="summary-card">
+        <div>
+          <div class="summary-label" id="label-total-deuda">Total deuda proveedores</div>
+          <div class="summary-amount" id="total-deuda">$0,00</div>
+        </div>
+        <div style="text-align:right">
+          <div class="summary-label">Proveedores</div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:var(--accent2)" id="count-prov">0</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input type="text" placeholder="🔍 Buscar proveedor..." id="input-buscar" oninput="renderProveedores()" />
+        <button id="btn-filtro-aprobadas" onclick="toggleFiltroAprobadas()"
+          style="white-space:nowrap;padding:0 12px;height:44px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s">
+          ✅ Con FC
+        </button>
+        <button class="btn-fab" onclick="openModalProveedor()">+</button>
+      </div>
+    </div>
+    <div class="scroll-area" id="lista-proveedores"></div>
+  </div>
+
+  <div class="view" id="view-detalle">
+    <div class="det-header">
+      <div class="det-back" onclick="volverLista()">← Volver</div>
+      <div class="det-prov-info">
+        <div>
+          <div id="det-nombre"></div>
+          <div id="det-cuit"></div>
+          <div id="det-direccion" style="color:var(--muted);font-size:.78rem;margin-top:2px"></div>
+          <div id="det-obs" style="color:var(--muted);font-size:.78rem;margin-top:2px;font-style:italic"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button onclick="editarProveedor()" title="Editar proveedor"
+            style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--muted);font-size:.82rem;cursor:pointer;font-family:inherit">✏️ Editar</button>
+          <div class="det-saldo-box">
+            <span id="det-saldo-label">Saldo a pagar</span>
+            <div id="det-saldo" class="det-saldo-valor deuda">$0,00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="det-actions">
+      <button class="btn-action btn-fc"   onclick="openModalMovimiento('fc')">🧾 Factura</button>
+      <button class="btn-action btn-fc"   onclick="openModalMovimiento('nd')" style="background:rgba(245,158,11,.15);color:#fcd34d;border-color:rgba(245,158,11,.3)">📋 Nota Déb.</button>
+      <button class="btn-action btn-pago" onclick="openModalMovimiento('nc')">📝 Nota Créd.</button>
+      <button class="btn-action btn-pago" onclick="openModalMovimiento('ret')">🏛️ Retención</button>
+      <button class="btn-action" onclick="abrirCamaraFC()"
+        style="grid-column:span 2;background:rgba(168,85,247,.15);color:#d8b4fe;border-color:rgba(168,85,247,.3)">📷 Cargar FC por foto o PDF</button>
+    </div>
+    <input type="file" id="input-foto-fc" accept="image/*,application/pdf" style="display:none" onchange="procesarFotoFC(this)" />
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 10px">
+      <div class="mov-section-title" style="margin:0;padding:0">Movimientos</div>
+      <button id="btn-filtro-pendientes" onclick="toggleFiltroPendientes()"
+        style="font-size:.78rem;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s">
+        📋 Solo pendientes
+      </button>
+    </div>
+    <div style="padding:0 16px 10px">
+      <input type="text" id="input-buscar-mov" placeholder="🔍 Buscar por N° comprobante o descripción..."
+        oninput="renderMovimientos()"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:.88rem;outline:none;font-family:inherit;box-sizing:border-box" />
+    </div>
+    <div class="scroll-area" id="lista-movimientos"></div>
+  </div>
+</div>
+
+<!-- Barra flotante aprobado - fixed fuera del flow -->
+<div class="barra-aprobado" id="barra-aprobado">
+  <div class="barra-top">
+    <div>
+      <div class="barra-label">✅ Aprobado a pagar</div>
+      <div class="barra-count" id="barra-count">0 facturas seleccionadas</div>
+    </div>
+    <div class="barra-monto" id="barra-monto">$0,00</div>
+  </div>
+  <div class="barra-actions">
+    <button class="btn-barra btn-barra-clear"  onclick="limpiarChecks()">Limpiar</button>
+    <button class="btn-barra btn-barra-pagar"  onclick="marcarPagadas()">💳 Marcar pagadas</button>
+    <button class="btn-barra btn-barra-print"  onclick="imprimirAprobado()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<!-- Área oculta para impresión -->
+<div id="print-area" style="display:none"></div>
+
+<!-- MODAL ELIMINAR PROVEEDOR -->
+<div class="modal-overlay" id="modal-eliminar-prov">
+  <div class="modal">
+    <div class="modal-title">🗑️ Eliminar proveedor</div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:14px;margin-bottom:18px">
+      <div style="font-weight:600;margin-bottom:4px" id="eliminar-prov-nombre"></div>
+      <div style="color:var(--muted);font-size:.85rem" id="eliminar-prov-info"></div>
+    </div>
+    <p style="color:var(--muted);font-size:.88rem;margin-bottom:16px;line-height:1.5">
+      Esta acción eliminará el proveedor y <strong style="color:var(--red)">todos sus movimientos</strong>. No se puede deshacer.
+    </p>
+    <div class="form-group">
+      <label>Ingresá tu clave para confirmar</label>
+      <input id="eliminar-prov-clave" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')confirmarEliminarProv()" />
+    </div>
+    <div id="eliminar-prov-error" style="color:var(--red);font-size:.82rem;margin-bottom:8px;min-height:18px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalEliminarProv()">Cancelar</button>
+      <button class="btn-save" onclick="confirmarEliminarProv()" style="background:var(--red)">🗑️ Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROVEEDOR -->
+<div class="modal-overlay" id="modal-proveedor">
+  <div class="modal">
+    <div class="modal-title" id="modal-prov-titulo">Nuevo Proveedor</div>
+    <div class="form-group"><label>Nombre / Razón Social *</label><input id="prov-nombre" type="text" placeholder="Ej: Distribuidora López" /></div>
+    <div class="form-group"><label>CUIT (opcional)</label><input id="prov-cuit" type="text" placeholder="20-12345678-9" /></div>
+    <div class="form-group"><label>Dirección (opcional)</label><input id="prov-direccion" type="text" placeholder="Ej: Av. San Martín 1234" /></div>
+    <div class="form-group"><label>Observaciones (opcional)</label><input id="prov-obs" type="text" placeholder="Ej: Paga los viernes, contacto Juan..." /></div>
+    <input type="hidden" id="prov-edit-id" value="" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalProveedor()">Cancelar</button>
+      <button class="btn-save"   onclick="guardarProveedor()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVIMIENTO -->
+<div class="modal-overlay" id="modal-movimiento">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Nuevo Movimiento</div>
+
+    <!-- Selector tipo comprobante -->
+    <div style="margin-bottom:16px">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:8px">Tipo de comprobante</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="tipo-comp-selector">
+        <label class="medio-opt tipo-comp-opt" data-tipo="fc" data-label="Nueva Factura">🧾 Factura</label>
+        <label class="medio-opt tipo-comp-opt" data-tipo="nd" data-label="Nueva Nota de Débito">📋 Nota de Débito</label>
+        <label class="medio-opt tipo-comp-opt" data-tipo="nc" data-label="Nueva Nota de Crédito">📝 Nota de Crédito</label>
+        <label class="medio-opt tipo-comp-opt" data-tipo="ret" data-label="Nueva Retención de Ganancias">🏛️ Ret. Ganancias</label>
+        <label class="medio-opt tipo-comp-opt" data-tipo="envases" data-label="Nuevo Envases">📦 Envases</label>
+        <label class="medio-opt tipo-comp-opt" data-tipo="pago" data-label="Nuevo Pago">💳 Pago / OP</label>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Monto *</label><input id="mov-monto" type="number" step="0.01" min="0.01" placeholder="0,00" /></div>
+      <div class="form-group"><label>Fecha *</label><input id="mov-fecha" type="date" /></div>
+    </div>
+    <div class="form-group"><label>N° Comprobante</label><input id="mov-numero" type="text" placeholder="0001-00012345" /></div>
+    <div class="form-group"><label>Descripción</label><input id="mov-descripcion" type="text" placeholder="Ej: agosto, descuento..." /></div>
+
+    <!-- Estado pago: solo visible al editar una FC -->
+    <div id="row-estado-pago" style="display:none;margin-bottom:4px">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:8px">Estado de pago</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label class="medio-opt" id="opt-pendiente" onclick="setEstadoPagoModal('normal')" style="cursor:pointer">⏳ Pendiente</label>
+        <label class="medio-opt" id="opt-pagada"    onclick="setEstadoPagoModal('pagada')"  style="cursor:pointer">💳 Pagada</label>
+      </div>
+    </div>
+
+    <input type="hidden" id="mov-edit-id" value="" />
+    <input type="hidden" id="mov-estado-pago" value="normal" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalMovimiento()">Cancelar</button>
+      <button class="btn-save"   onclick="guardarMovimiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FOTO FC -->
+<div class="modal-overlay" id="modal-foto-fc">
+  <div class="modal">
+    <div class="modal-title">📷 FC escaneada</div>
+
+    <!-- Estado: procesando -->
+    <div id="foto-fc-procesando" style="text-align:center;padding:24px 0">
+      <div style="font-size:2rem;margin-bottom:12px">🔍</div>
+      <div style="color:var(--muted);font-size:.9rem">Analizando la factura...</div>
+    </div>
+
+    <!-- Estado: resultado -->
+    <div id="foto-fc-resultado" style="display:none">
+      <img id="foto-fc-preview" style="width:100%;border-radius:10px;margin-bottom:14px;max-height:200px;object-fit:cover" />
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+        <div style="color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Datos detectados — revisá y corregí si hace falta</div>
+
+        <div class="form-row" style="margin-bottom:10px">
+          <div>
+            <label style="display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px">Tipo</label>
+            <select id="foto-tipo"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit">
+              <option value="fc">🧾 Factura</option>
+              <option value="nd">📋 Nota de Débito</option>
+              <option value="nc">📝 Nota de Crédito</option>
+              <option value="ret">🏛️ Ret. Ganancias</option>
+              <option value="envases">📦 Envases</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px">Fecha</label>
+            <input id="foto-fecha" type="date"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit" />
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:10px">
+          <div>
+            <label style="display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px">N° Comprobante</label>
+            <input id="foto-numero" type="text" placeholder="0001-00012345"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit" />
+          </div>
+          <div>
+            <label style="display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px">Monto *</label>
+            <input id="foto-monto" type="number" step="0.01" placeholder="0,00"
+              style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit" />
+          </div>
+        </div>
+        <div>
+          <label style="display:block;color:var(--muted);font-size:.78rem;margin-bottom:4px">Descripción</label>
+          <input id="foto-descripcion" type="text" placeholder="Ej: agosto, mercadería..."
+            style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:.88rem;font-family:inherit" />
+        </div>
+      </div>
+
+      <div id="foto-fc-error" style="display:none;color:var(--red);font-size:.82rem;margin-bottom:10px;text-align:center"></div>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-save" onclick="confirmarFotoFC()" style="padding:13px">✅ Confirmar y cargar</button>
+        <button class="btn-cancel" onclick="closeModalFotoFC()" style="padding:11px;text-align:center">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BÚSQUEDA GLOBAL -->
+<div class="modal-overlay" id="modal-busqueda-global" style="align-items:flex-start;padding-top:60px">
+  <div class="modal" style="border-radius:16px;max-height:80vh;display:flex;flex-direction:column">
+    <div class="modal-title">🔎 Buscar comprobante</div>
+    <input type="text" id="input-busqueda-global" placeholder="Número, descripción, proveedor..."
+      oninput="ejecutarBusquedaGlobal()"
+      style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:.95rem;outline:none;font-family:inherit;margin-bottom:14px;box-sizing:border-box" />
+    <div id="resultados-busqueda-global" style="overflow-y:auto;flex:1;min-height:80px"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn-cancel" onclick="closeModalBusquedaGlobal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURACIÓN -->
+<div class="modal-overlay" id="modal-config">
+  <div class="modal">
+    <div class="modal-title">⚙️ Configuración</div>
+    <div class="form-group">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:6px">Nombre de tu empresa</label>
+      <input id="cfg-empresa" type="text" placeholder="Ej: Putruele"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:1rem;outline:none;font-family:inherit" />
+      <div style="color:var(--muted);font-size:.78rem;margin-top:6px">Se usa para mostrar "A favor de [empresa]" cuando el saldo es a tu favor.</div>
+    </div>
+    <div class="form-group" style="margin-top:14px">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:6px">API Key de Google Gemini <span style="color:var(--accent2)">(para leer fotos y PDFs)</span></label>
+      <input id="cfg-apikey" type="password" placeholder="AIza..."
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:.9rem;outline:none;font-family:inherit" />
+      <div style="color:var(--muted);font-size:.78rem;margin-top:6px">Gratis en <strong>aistudio.google.com</strong> → "Get API key". Sin tarjeta de crédito.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalConfig()">Cancelar</button>
+      <button class="btn-save" onclick="guardarConfig()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BACKUP -->
+<div class="modal-overlay" id="modal-backup">
+  <div class="modal">
+    <div class="modal-title">💾 Backup de datos</div>
+    <div class="backup-options">
+      <button class="backup-btn" onclick="exportarBackup()">
+        <div class="bb-icon">📤</div>
+        <div>
+          <span class="bb-title">Exportar backup</span>
+          <span class="bb-sub">Descarga un archivo JSON con todos los datos actuales</span>
+        </div>
+      </button>
+      <button class="backup-btn" onclick="openModalRestore()">
+        <div class="bb-icon">📥</div>
+        <div>
+          <span class="bb-title">Restaurar backup</span>
+          <span class="bb-sub">Cargá un archivo JSON para recuperar datos anteriores</span>
+        </div>
+      </button>
+      <button class="backup-btn" onclick="openModalXLS()">
+        <div class="bb-icon">📊</div>
+        <div>
+          <span class="bb-title">Importar desde Excel</span>
+          <span class="bb-sub">Cargá uno o varios archivos .xls de cuentas corrientes</span>
+        </div>
+      </button>
+    </div>
+    <div class="modal-actions" style="margin-top:8px">
+      <button class="btn-cancel" onclick="closeModalBackup()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESTAURAR -->
+<div class="modal-overlay" id="modal-restore">
+  <div class="modal">
+    <div class="modal-title">📥 Restaurar backup</div>
+    <div class="restore-warning">⚠️ Esto va a modificar los datos actuales. Elegí cómo querés restaurar:</div>
+    <div class="restore-options">
+      <label class="restore-opt">
+        <input type="radio" name="restore-mode" value="reemplazar" checked />
+        <span><strong>Reemplazar todo</strong> — borra los datos actuales y carga el backup</span>
+      </label>
+      <label class="restore-opt">
+        <input type="radio" name="restore-mode" value="agregar" />
+        <span><strong>Agregar</strong> — mantiene los datos actuales y suma los del backup</span>
+      </label>
+    </div>
+    <div class="file-drop" id="file-drop" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="fd-icon">📂</div>
+      <p>Tocá para elegir el archivo<br><strong>.json</strong> de backup</p>
+    </div>
+    <div class="file-selected" id="file-selected">✓ Archivo listo</div>
+    <input type="file" id="file-input" accept=".json" style="display:none" onchange="handleFileSelect(this)" />
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalRestore()">Cancelar</button>
+      <button class="btn-save" onclick="restaurarBackup()">Restaurar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL CONFIRMAR PAGO -->
+<div class="modal-overlay" id="modal-confirmar-pago">
+  <div class="modal">
+    <div class="modal-title">💳 Registrar Orden de Pago</div>
+
+    <!-- Resumen facturas -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;">
+      <div style="color:var(--muted);font-size:.78rem;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Facturas a cancelar</div>
+      <div id="confirmar-pago-lista-fc" style="font-size:.88rem;line-height:1.8"></div>
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--muted);font-size:.82rem">Total</span>
+        <span id="confirmar-pago-count" style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem;color:var(--accent2)"></span>
+      </div>
+    </div>
+
+    <!-- Formulario OP -->
+    <div class="form-row" style="margin-bottom:14px">
+      <div>
+        <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:6px">N° Orden de Pago</label>
+        <input id="op-numero" type="text" placeholder="OP-0001"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:.95rem;outline:none;font-family:inherit" />
+      </div>
+      <div>
+        <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:6px">Fecha</label>
+        <input id="op-fecha" type="date"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:.95rem;outline:none;font-family:inherit" />
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:8px">Medio de pago</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="medios-pago">
+        <label class="medio-opt" data-val="transferencia">🏦 Transferencia</label>
+        <label class="medio-opt" data-val="cheque">📄 Cheque</label>
+        <label class="medio-opt" data-val="echeq">📱 E-cheq</label>
+        <label class="medio-opt" data-val="efectivo">💵 Efectivo</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:4px">
+      <label style="display:block;color:var(--muted);font-size:.82rem;margin-bottom:6px">Monto</label>
+      <input id="confirmar-pago-monto" type="number" step="0.01"
+        style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:1rem;outline:none;font-family:inherit" />
+    </div>
+
+    <input type="hidden" id="confirmar-pago-ids" />
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px">
+      <button class="btn-save" onclick="confirmarRegistrarPago()" style="padding:13px">💳 Registrar pago y marcar pagadas</button>
+      <button class="btn-cancel" onclick="confirmarSoloMarcar()" style="padding:12px;text-align:center">Solo marcar pagadas (sin registrar pago)</button>
+      <button class="btn-cancel" onclick="document.getElementById('modal-confirmar-pago').classList.remove('open')" style="padding:10px;text-align:center;font-size:.82rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-xls">
+  <div class="modal">
+    <div class="modal-title">📊 Importar desde Excel</div>
+    <div class="restore-warning">
+      Cada archivo <strong>.xls</strong> se importa como un proveedor.<br>
+      El nombre del proveedor se toma del nombre del archivo.
+    </div>
+    <div class="file-drop" id="xls-drop"
+         onclick="document.getElementById('xls-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleXLSDrop(event)" style="margin: 14px 0 6px">
+      <div class="fd-icon">📂</div>
+      <p>Tocá para elegir archivos<br><strong>.xls</strong> — podés seleccionar varios a la vez</p>
+    </div>
+    <input type="file" id="xls-input" accept=".xls,.xlsx" multiple style="display:none" onchange="handleXLSSelect(this)" />
+    <div id="xls-lista" style="margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModalXLS()">Cancelar</button>
+      <button class="btn-save" id="btn-importar-xls" onclick="importarXLS()" disabled style="opacity:.5">Importar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // =============================================
+  // 🔐 CREDENCIALES — cambiá estos valores
+  // =============================================
+  const USUARIO  = "gestion";
+  const PASSWORD = "Prov2026";
+  // =============================================
+
+  let logueado = sessionStorage.getItem("cp_auth") === "1";
+
+  function doLogin() {
+    const u = document.getElementById("inp-user").value.trim();
+    const p = document.getElementById("inp-pass").value;
+    if (u === USUARIO && p === PASSWORD) {
+      try {
+        sessionStorage.setItem("cp_auth", "1");
+        logueado = true;
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "flex";
+        document.getElementById("login-error").textContent = "";
+        renderProveedores();
+      } catch(e) {
+        console.error("Error al entrar:", e);
+        alert("Error al cargar la app: " + e.message);
+      }
+    } else {
+      document.getElementById("login-error").textContent = "Usuario o contraseña incorrectos";
+      document.getElementById("inp-pass").value = "";
+      document.getElementById("inp-pass").focus();
+    }
+  }
+
+  function doLogout() {
+    sessionStorage.removeItem("cp_auth");
+    logueado = false;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("inp-user").value = "";
+    document.getElementById("inp-pass").value = "";
+  }
+
+  if (logueado) {
+    // inicialización movida a DOMContentLoaded
+  }
+
+  // ——— DATOS DE PRUEBA ———
+  let proveedores = [
+    { id: 1, nombre: "Distribuidora López",     cuit: "20-28456789-3", saldo: 154320.50 },
+    { id: 2, nombre: "Frigorífico del Sur S.A.", cuit: "30-71234567-8", saldo: 89000.00 },
+    { id: 3, nombre: "Lácteos Pampeanos",        cuit: "20-34567890-1", saldo: -12500.00 },
+    { id: 4, nombre: "Importadora Nórdica",      cuit: "30-68901234-5", saldo: 0 },
+    { id: 5, nombre: "El Molino Harinero",       cuit: "20-19876543-2", saldo: 230750.75 },
+    { id: 6, nombre: "Bebidas del Litoral",      cuit: "30-55443322-1", saldo: 45600.00 },
+  ];
+  let movimientos = {
+    1: [
+      { id: 101, tipo: "fc",   monto: 200000,   numero: "0001-00004521", descripcion: "FC septiembre", fecha: "15/02/2026" },
+      { id: 102, tipo: "pago", monto: 80000,    numero: "",              descripcion: "Pago parcial",  fecha: "20/02/2026" },
+      { id: 103, tipo: "fc",   monto: 34320.50, numero: "0001-00004689", descripcion: "FC octubre",    fecha: "05/03/2026" },
+    ],
+    2: [
+      { id: 201, tipo: "fc",   monto: 120000, numero: "0002-00001122", descripcion: "Carne vacuna", fecha: "10/02/2026" },
+      { id: 202, tipo: "pago", monto: 31000,  numero: "",              descripcion: "",              fecha: "01/03/2026" },
+    ],
+    3: [
+      { id: 301, tipo: "fc",   monto: 50000, numero: "0003-00000891", descripcion: "Quesos y cremas",       fecha: "28/01/2026" },
+      { id: 302, tipo: "pago", monto: 62500, numero: "",              descripcion: "Pago total + adelanto", fecha: "15/02/2026" },
+    ],
+    4: [],
+    5: [{ id: 501, tipo: "fc", monto: 230750.75, numero: "0005-00002234", descripcion: "Harina 000 y 0000", fecha: "01/03/2026" }],
+    6: [{ id: 601, tipo: "fc", monto: 45600,     numero: "0006-00003310", descripcion: "Gaseosas y agua",   fecha: "08/03/2026" }],
+  };
+  let nextId = 1000;
+  let selectedId = null;
+  let tipoMov = "fc";
+
+  const fmt = n => "$" + (n||0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Formatea "0001-00004521" → "1-4521"
+  function fmtNumFC(numero) {
+    if (!numero) return numero;
+    const partes = String(numero).split("-");
+    if (partes.length === 2) {
+      const puntoVenta = parseInt(partes[0], 10); // quita ceros: "0001" → 1
+      const nro = parseInt(partes[1], 10);         // quita ceros: "00004521" → 4521
+      return `${puntoVenta}-${nro}`;
+    }
+    return numero;
+  }
+  function showView(id) { document.querySelectorAll(".view").forEach(v => v.classList.remove("active")); document.getElementById(id).classList.add("active"); }
+  function showToast(msg, type = "ok") {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.className = "toast show " + type;
+    setTimeout(() => t.className = "toast", type === "error" ? 5000 : 3000);
+  }
+
+  function renderProveedores() {
+    const filtro = document.getElementById("input-buscar").value.toLowerCase();
+    let filtered = proveedores.filter(p => p.nombre.toLowerCase().includes(filtro));
+
+    // Filtro FC aprobadas
+    if (filtroAprobadas) {
+      filtered = filtered.filter(p => {
+        const movsProv = movimientos[p.id] || [];
+        return movsProv.some(m => (m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada");
+      });
+    }
+    if (filtroAprobadas) {
+      const totalAprobado = filtered.reduce((sum, p) => {
+        const movsProv = movimientos[p.id] || [];
+        return sum + movsProv.filter(m => (m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada").reduce((s, m) => s + m.monto, 0);
+      }, 0);
+      document.getElementById("total-deuda").textContent = fmt(totalAprobado);
+      document.getElementById("count-prov").textContent = filtered.length;
+      document.getElementById("label-total-deuda").textContent = "Total FC aprobadas";
+    } else {
+      document.getElementById("total-deuda").textContent = fmt(proveedores.reduce((s, p) => s + Math.max(p.saldo, 0), 0));
+      document.getElementById("count-prov").textContent = proveedores.length;
+      document.getElementById("label-total-deuda").textContent = "Total deuda proveedores";
+    }
+    const lista = document.getElementById("lista-proveedores");
+    if (!filtered.length) {
+      lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📂</div><p>${filtro ? "Sin resultados" : "No hay proveedores"}</p><small>${filtro ? "" : "Agregá uno con el botón +"}</small></div>`;
+      return;
+    }
+    lista.innerHTML = filtered.map(p => {
+      const s = p.saldo; const cls = s > 0 ? "deuda" : s < 0 ? "favor" : "cero";
+
+      // Calcular FC aprobadas pendientes de pago
+      const movsProv = movimientos[p.id] || [];
+      const aprobadas = movsProv.filter(m => (m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada");
+      const totalAprobado = aprobadas.reduce((sum, m) => sum + m.monto, 0);
+      const badgeAprobado = aprobadas.length > 0
+        ? `<div style="margin-top:5px;display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.35);border-radius:20px;padding:2px 8px">
+            <span style="font-size:.68rem;color:var(--accent2)">✅ ${aprobadas.length} FC aprobada${aprobadas.length>1?"s":""}</span>
+            <span style="font-size:.72rem;font-weight:700;color:var(--accent2);font-family:'Syne',sans-serif">${fmt(totalAprobado)}</span>
+           </div>`
+        : "";
+
+      return `<div class="proveedor-card ${cls}" onclick="openDetalle(${p.id})">
+        <div class="prov-info">
+          <div class="prov-avatar">${p.nombre[0].toUpperCase()}</div>
+          <div>
+            <div class="prov-nombre">${p.nombre}</div>
+            <div class="prov-sub">${p.cuit||"Sin CUIT"}</div>
+            ${badgeAprobado}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px">
+          <div class="prov-saldo">
+            <span class="saldo-label">${s > 0 ? "Debemos" : s < 0 ? "A favor de " + getNombreEmpresa() : "Sin saldo"}</span>
+            <span class="saldo-monto">${fmt(Math.abs(s))}</span>
+          </div>
+          <button onclick="event.stopPropagation();abrirEliminarProv(${p.id})"
+            style="background:none;border:1px solid rgba(239,68,68,.3);color:rgba(239,68,68,.6);border-radius:8px;padding:6px 8px;cursor:pointer;font-size:.85rem;flex-shrink:0"
+            title="Eliminar proveedor">🗑️</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function openDetalle(id) {
+    selectedId = id;
+    filtroPendientes = false;
+    facturasAprobadas.clear();
+    const p = proveedores.find(x => x.id === id);
+    document.getElementById("det-nombre").textContent = p.nombre;
+    document.getElementById("det-cuit").textContent = p.cuit || "Sin CUIT";
+    document.getElementById("det-direccion").textContent = p.direccion || "";
+    document.getElementById("det-obs").textContent = p.obs || "";
+    const s = p.saldo;
+    document.getElementById("det-saldo").textContent = fmt(Math.abs(s));
+    document.getElementById("det-saldo").className = "det-saldo-valor " + (s > 0 ? "deuda" : s < 0 ? "favor" : "cero");
+    document.getElementById("det-saldo-label").textContent = s > 0 ? "Saldo a pagar" : s < 0 ? "A favor de " + getNombreEmpresa() : "Sin saldo";
+    showView("view-detalle");
+    renderMovimientos();
+  }
+
+  function volverLista() { showView("view-proveedores"); renderProveedores(); }
+
+  let facturasAprobadas = new Set();
+
+  // Estado persistente en sessionStorage (simula "nube" para la demo)
+  function getEstados() {
+    try { return JSON.parse(sessionStorage.getItem("cp_estados") || "{}"); } catch { return {}; }
+  }
+  function setEstados(obj) { sessionStorage.setItem("cp_estados", JSON.stringify(obj)); }
+
+  function getEstadoFactura(id) {
+    return getEstados()[id] || "normal"; // "normal" | "aprobada" | "pagada"
+  }
+  function setEstadoFactura(id, estado) {
+    const e = getEstados(); e[id] = estado; setEstados(e);
+  }
+
+  function renderMovimientos() {
+    const lista = document.getElementById("lista-movimientos");
+    const movsOrig = movimientos[selectedId] || [];
+    if (!movsOrig.length) {
+      lista.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><p>Sin movimientos aún</p></div>`;
+      actualizarBarra(); return;
+    }
+
+    // Sincronizar set de aprobadas con estados guardados
+    facturasAprobadas.clear();
+    movsOrig.forEach(m => { if ((m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada") facturasAprobadas.add(m.id); });
+
+    // Calcular saldo acumulado en orden cronológico (original)
+    let saldoAcum = 0;
+    const saldoMap = {};
+    movsOrig.forEach(m => {
+      const cfg = TIPOS[m.tipo] || TIPOS.fc;
+      saldoAcum += cfg.efecto * m.monto;
+      saldoMap[m.id] = saldoAcum;
+    });
+
+    // Mostrar en orden inverso (más reciente primero)
+    const movs = movsOrig.slice().reverse();
+
+    lista.innerHTML = movs.map(m => {
+      const cfg    = TIPOS[m.tipo] || TIPOS.fc;
+      const puedeAprobar = (m.tipo === "fc" || m.tipo === "nd");
+      const estado = puedeAprobar ? getEstadoFactura(m.id) : "normal";
+
+      // Filtro de búsqueda local
+      const q = (document.getElementById("input-buscar-mov")?.value || "").toLowerCase().trim();
+      if (q) {
+        const haystack = [m.numero, m.descripcion, cfg.label].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return "";
+      }
+
+      // Filtro solo pendientes (facturas no pagadas)
+      if (filtroPendientes && m.tipo === "fc" && estado === "pagada") return "";
+      if (filtroPendientes && m.tipo !== "fc") return "";
+      const rowCls = estado === "aprobada" ? "aprobada" : estado === "pagada" ? "pagada" : "";
+      const checked = estado === "aprobada" ? "checked" : "";
+      const disabled = estado === "pagada" ? "disabled" : "";
+      const clsMonto = cfg.efecto === 1 ? "monto-deuda" : "monto-favor";
+      const signo = cfg.efecto === 1 ? "+" : "-";
+
+      let badge = "";
+      if (estado === "aprobada") badge = `<span class="badge-aprobada">✅ Aprobada</span>`;
+      if (estado === "pagada")   badge = `<span class="badge-pagada">💳 Pagada</span>`;
+
+      // Vínculo: FC → OP que la pagó
+      let vinculo = "";
+      if (estado === "pagada") {
+        const op = getEstados()["fc_op_" + m.id];
+        if (op) {
+          const partes = [op.numero ? "OP N°" + op.numero : "OP", op.medio, op.fecha].filter(Boolean);
+          vinculo = `<div class="vinculo-box">Cancelada con: <strong>${partes.join(" — ")}</strong></div>`;
+        }
+      }
+
+      // Vínculo: Pago → FCs que contempló
+      let vinculoPago = "";
+      if (m.tipo === "pago") {
+        const fcIds = getEstados()["pago_fcs_" + m.id];
+        if (fcIds && fcIds.length) {
+          const movsProv = movimientos[selectedId] || [];
+          const labels = fcIds.map(fid => {
+            const fc = movsProv.find(x => Number(x.id) === Number(fid));
+            if (!fc) return "FC";
+            if (fc.numero) return "FC N°" + fmtNumFC(fc.numero);
+            if (fc.descripcion) return "FC — " + fc.descripcion;
+            return "Factura";
+          });
+          vinculoPago = `<div class="vinculo-box">Contempla: <strong>${labels.join(", ")}</strong></div>`;
+        }
+      }
+
+      // Saldo acumulado después de este movimiento
+      const saldoFila = saldoMap[m.id] ?? 0;
+      const saldoColor = saldoFila > 0 ? "var(--yellow)" : saldoFila < 0 ? "var(--green)" : "var(--muted)";
+      const saldoSigno = saldoFila > 0 ? "D " : saldoFila < 0 ? "A " : "";
+      const saldoTexto = saldoSigno + fmt(Math.abs(saldoFila));
+
+      const esPago = m.tipo === "pago";
+      const fcIdsVinculadas = esPago ? (getEstados()["pago_fcs_" + m.id] || []) : [];
+
+      // Check izquierdo: aprobación para FC/ND, resaltado para pagos con FC vinculadas, vacío para el resto
+      let checkIzq;
+      if (puedeAprobar && estado !== "pagada") {
+        checkIzq = `<input type="checkbox" class="mov-check" ${checked} ${disabled} onclick="toggleAprobada(event,${m.id})" />`;
+      } else if (esPago && fcIdsVinculadas.length) {
+        checkIzq = `<input type="checkbox" class="mov-check pago-link-check" title="Ver FC contempladas"
+            onchange="toggleResaltadoPago(this,${m.id},[${fcIdsVinculadas.join(",")}])"
+            style="accent-color:var(--accent);cursor:pointer" />`;
+      } else {
+        checkIzq = `<div style="width:20px;flex-shrink:0"></div>`;
+      }
+
+      return `<div class="movimiento-row ${rowCls}" id="mov-row-${m.id}">
+        ${checkIzq}
+        <div class="mov-icon">${cfg.icon}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:38px;margin-right:4px">
+          <div style="font-size:.7rem;color:var(--muted);line-height:1.2;text-align:center">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
+          <div style="font-size:.68rem;color:var(--muted);opacity:.7">${(m.fecha||"").split("/")[2]||""}</div>
+        </div>
+        <div class="mov-info">
+          <div class="mov-tipo">${cfg.label}${m.numero ? " N°" + fmtNumFC(m.numero) : ""} ${badge}</div>
+          <div class="mov-fecha">${m.descripcion || ""}</div>
+          ${vinculo}${vinculoPago}
+        </div>
+        <div class="mov-monto ${clsMonto}" style="flex-shrink:0;margin-left:6px;display:flex;align-items:center">${signo}${fmt(m.monto)}</div>
+        <div style="flex-shrink:0;margin-left:14px;padding-left:14px;border-left:1px solid var(--border);text-align:right;min-width:80px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
+          <div style="font-size:.68rem;color:var(--muted);margin-bottom:1px">saldo</div>
+          <div style="font-size:.78rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
+          ${(estado !== "pagada" || m.tipo === "pago") ? `<button class="mov-delete" title="Editar" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3)">✏️</button>` : ""}
+          <button class="mov-delete" title="Eliminar" onclick="deleteMov(${m.id})">×</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    actualizarBarra();
+  }
+
+  function toggleAprobada(e, id) {
+    e.stopPropagation();
+    const actual = getEstadoFactura(id);
+    if (actual === "aprobada") {
+      setEstadoFactura(id, "normal");
+      facturasAprobadas.delete(id);
+    } else {
+      setEstadoFactura(id, "aprobada");
+      facturasAprobadas.add(id);
+    }
+    renderMovimientos();
+  }
+
+  function actualizarBarra() {
+    const barra = document.getElementById("barra-aprobado");
+    const lista = document.getElementById("lista-movimientos");
+    const movs  = movimientos[selectedId] || [];
+    const aprobadas = movs.filter(m => m.tipo === "fc" && getEstadoFactura(m.id) === "aprobada");
+    const total = aprobadas.reduce((s, m) => s + m.monto, 0);
+    const count = aprobadas.length;
+    if (count === 0) {
+      barra.classList.remove("visible");
+      if (lista) lista.style.paddingBottom = "20px";
+      return;
+    }
+    barra.classList.add("visible");
+    if (lista) lista.style.paddingBottom = "160px";
+    document.getElementById("barra-monto").textContent = fmt(total);
+    document.getElementById("barra-count").textContent = `${count} factura${count !== 1 ? "s" : ""} aprobada${count !== 1 ? "s" : ""}`;
+  }
+
+  function limpiarChecks() {
+    const movs = movimientos[selectedId] || [];
+    movs.forEach(m => { if (m.tipo === "fc" && getEstadoFactura(m.id) === "aprobada") setEstadoFactura(m.id, "normal"); });
+    facturasAprobadas.clear();
+    renderMovimientos();
+  }
+
+  let medioSeleccionado = "";
+
+  function marcarPagadas() {
+    const movs = movimientos[selectedId] || [];
+    const aprobadas = movs.filter(m => m.tipo === "fc" && getEstadoFactura(m.id) === "aprobada");
+    if (!aprobadas.length) return;
+    const total = aprobadas.reduce((s, m) => s + m.monto, 0);
+
+    // Poblar lista de facturas en el modal
+    document.getElementById("confirmar-pago-lista-fc").innerHTML = aprobadas.map(m => {
+      const label = m.numero ? "FC N°" + fmtNumFC(m.numero) : (m.descripcion ? "FC — " + m.descripcion : "Factura");
+      return `<div style="display:flex;justify-content:space-between;gap:8px">
+        <span style="color:var(--text)">🧾 ${label}</span>
+        <span style="color:#fca5a5;font-weight:600;flex-shrink:0">${fmt(m.monto)}</span>
+      </div>`;
+    }).join("");
+    document.getElementById("confirmar-pago-count").textContent = fmt(total);
+    document.getElementById("confirmar-pago-monto").value = total.toFixed(2);
+    document.getElementById("confirmar-pago-ids").value = aprobadas.map(m => m.id).join(",");
+    document.getElementById("op-numero").value = "";
+    document.getElementById("op-fecha").value = new Date().toISOString().split("T")[0];
+
+    // Reset medio de pago
+    medioSeleccionado = "";
+    document.querySelectorAll(".medio-opt").forEach(el => el.classList.remove("selected"));
+
+    document.getElementById("modal-confirmar-pago").classList.add("open");
+  }
+
+  // Click en medios de pago
+  document.addEventListener("click", e => {
+    const opt = e.target.closest(".medio-opt");
+    if (opt) {
+      document.querySelectorAll(".medio-opt").forEach(el => el.classList.remove("selected"));
+      opt.classList.add("selected");
+      medioSeleccionado = opt.dataset.val;
+    }
+  });
+
+  function confirmarSoloMarcar() {
+    const ids = document.getElementById("confirmar-pago-ids").value.split(",").map(Number);
+    ids.forEach(id => setEstadoFactura(id, "pagada"));
+    facturasAprobadas.clear();
+    document.getElementById("modal-confirmar-pago").classList.remove("open");
+    renderMovimientos();
+    showToast("Facturas marcadas como pagadas ✓");
+  }
+
+  function confirmarRegistrarPago() {
+    const ids     = document.getElementById("confirmar-pago-ids").value.split(",").map(Number);
+    const monto   = parseFloat(document.getElementById("confirmar-pago-monto").value);
+    const numero  = document.getElementById("op-numero").value.trim();
+    const fecha   = document.getElementById("op-fecha").value;
+    const medio   = medioSeleccionado;
+
+    if (!monto || monto <= 0) return showToast("Ingresá un monto válido", "error");
+
+    const fechaStr = fecha ? new Date(fecha + "T12:00:00").toLocaleDateString("es-AR") : new Date().toLocaleDateString("es-AR");
+    const medioLabel = { transferencia: "Transferencia", cheque: "Cheque", echeq: "E-cheq", efectivo: "Efectivo" }[medio] || "";
+
+    // Crear el pago vinculado a las facturas
+    const pagoId = ++nextId;
+    const movsProv = movimientos[selectedId] || [];
+    const fcVinculadas = movsProv.filter(m => ids.map(Number).includes(Number(m.id)));
+    const descFC = fcVinculadas.map(m => {
+      if (m.numero) return "FC N°" + fmtNumFC(m.numero);
+      if (m.descripcion) return "FC — " + m.descripcion;
+      return "Factura";
+    }).join(", ");
+
+    const nuevoPago = {
+      id: pagoId,
+      tipo: "pago",
+      monto,
+      numero: numero || "",
+      descripcion: [medioLabel, descFC].filter(Boolean).join(" — "),
+      fecha: fechaStr,
+      medio,
+      fcIds: ids,   // facturas que cubre este pago
+    };
+
+    if (!movimientos[selectedId]) movimientos[selectedId] = [];
+    movimientos[selectedId].push(nuevoPago);
+
+    // Actualizar saldo del proveedor
+    proveedores.find(p => p.id === selectedId).saldo -= monto;
+
+    // Marcar facturas como pagadas y guardar referencia al pagoId
+    ids.forEach(id => {
+      setEstadoFactura(id, "pagada");
+      // Guardar vínculo FC → pago
+      const e = getEstados();
+      e["fc_op_" + id] = { pagoId, numero: numero || "", medio: medioLabel, fecha: fechaStr };
+      setEstados(e);
+    });
+
+    // Guardar vínculo pago → FCs
+    const e = getEstados();
+    e["pago_fcs_" + pagoId] = ids;
+    setEstados(e);
+
+    facturasAprobadas.clear();
+    document.getElementById("modal-confirmar-pago").classList.remove("open");
+    openDetalle(selectedId);
+    showToast("Pago registrado y facturas marcadas ✓");
+  }
+
+  function imprimirAprobado() {
+    const prov = proveedores.find(p => p.id === selectedId);
+    const movs = movimientos[selectedId] || [];
+    const seleccionadas = movs.filter(m => m.tipo === "fc" && facturasAprobadas.has(m.id));
+    const total = seleccionadas.reduce((s, m) => s + m.monto, 0);
+    const fecha = new Date().toLocaleDateString("es-AR");
+
+    const rows = seleccionadas.map(m => `
+      <tr>
+        <td>${m.fecha}</td>
+        <td>Factura${m.numero ? " N°" + m.numero : ""}</td>
+        <td>${m.descripcion || "-"}</td>
+        <td style="text-align:right;font-weight:600">${fmt(m.monto)}</td>
+      </tr>`).join("");
+
+    document.getElementById("print-area").innerHTML = `
+      <div class="print-header">
+        <div class="print-title">Resumen de pago aprobado</div>
+        <div class="print-sub">Proveedor: <strong>${prov.nombre}</strong>${prov.cuit ? " — CUIT: " + prov.cuit : ""}</div>
+        <div class="print-sub">Fecha: ${fecha}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr><th>Fecha</th><th>Comprobante</th><th>Descripción</th><th style="text-align:right">Monto</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="print-total">Total aprobado: ${fmt(total)}</div>`;
+
+    document.getElementById("print-area").style.display = "block";
+    window.print();
+    document.getElementById("print-area").style.display = "none";
+  }
+
+  function editarMov(id) {
+    const movs = movimientos[selectedId] || [];
+    const mov = movs.find(m => m.id === id);
+    if (!mov) return;
+    openModalMovimiento(mov.tipo, mov);
+  }
+
+  function desafectarFCsDePago(pagoId) {
+    const e = getEstados();
+    const fcIds = e["pago_fcs_" + pagoId];
+    if (fcIds && fcIds.length) {
+      fcIds.forEach(fcId => {
+        // Volver a "aprobada" (estaban pagadas por este pago)
+        e[fcId] = "aprobada";
+        // Limpiar trazabilidad de la FC
+        delete e["fc_op_" + fcId];
+        facturasAprobadas.add(Number(fcId));
+      });
+    }
+    delete e["pago_fcs_" + pagoId];
+    setEstados(e);
+  }
+
+  function deleteMov(id) {
+    const movs = movimientos[selectedId];
+    const idx = movs.findIndex(m => m.id === id);
+    if (idx === -1) return;
+    const m = movs[idx];
+
+    // Armar mensaje de confirmación con info de desafectación
+    const e = getEstados();
+    const fcIds = m.tipo === "pago" ? (e["pago_fcs_" + m.id] || []) : [];
+    let msg = "¿Eliminar este movimiento?";
+    if (fcIds.length) {
+      const labels = fcIds.map(fcId => {
+        const fc = movs.find(mv => mv.id === fcId);
+        return fc ? "FC " + fmtNumFC(fc.numero || String(fc.id)) : "FC #" + fcId;
+      });
+      msg = `¿Eliminar este pago?\n\nLas siguientes facturas volverán a estado Aprobada:\n${labels.join(", ")}`;
+    }
+    if (!confirm(msg)) return;
+
+    // Si es un pago, desafectar las FC asociadas
+    if (m.tipo === "pago") desafectarFCsDePago(m.id);
+
+    // Revertir el saldo
+    proveedores.find(p => p.id === selectedId).saldo -= (TIPOS[m.tipo]?.efecto || 1) * m.monto;
+    movs.splice(idx, 1);
+    openDetalle(selectedId);
+    showToast("Movimiento eliminado");
+  }
+
+  function openModalProveedor() {
+    document.getElementById("prov-nombre").value = "";
+    document.getElementById("prov-cuit").value = "";
+    document.getElementById("prov-direccion").value = "";
+    document.getElementById("prov-obs").value = "";
+    document.getElementById("prov-edit-id").value = "";
+    document.getElementById("modal-prov-titulo").textContent = "Nuevo Proveedor";
+    document.getElementById("modal-proveedor").classList.add("open");
+    setTimeout(() => document.getElementById("prov-nombre").focus(), 100);
+  }
+  function editarProveedor() {
+    const p = proveedores.find(p => p.id === selectedId);
+    if (!p) return;
+    document.getElementById("prov-nombre").value = p.nombre;
+    document.getElementById("prov-cuit").value = p.cuit || "";
+    document.getElementById("prov-direccion").value = p.direccion || "";
+    document.getElementById("prov-obs").value = p.obs || "";
+    document.getElementById("prov-edit-id").value = p.id;
+    document.getElementById("modal-prov-titulo").textContent = "✏️ Editar Proveedor";
+    document.getElementById("modal-proveedor").classList.add("open");
+    setTimeout(() => document.getElementById("prov-nombre").focus(), 100);
+  }
+  function closeModalProveedor() { document.getElementById("modal-proveedor").classList.remove("open"); }
+
+  let provAEliminarId = null;
+  function abrirEliminarProv(id) {
+    const p = proveedores.find(x => x.id === id);
+    if (!p) return;
+    provAEliminarId = id;
+    document.getElementById("eliminar-prov-nombre").textContent = p.nombre;
+    const movCount = (movimientos[id] || []).length;
+    document.getElementById("eliminar-prov-info").textContent =
+      `CUIT: ${p.cuit || "Sin CUIT"} · ${movCount} movimiento${movCount !== 1 ? "s" : ""}`;
+    document.getElementById("eliminar-prov-clave").value = "";
+    document.getElementById("eliminar-prov-error").textContent = "";
+    document.getElementById("modal-eliminar-prov").classList.add("open");
+    setTimeout(() => document.getElementById("eliminar-prov-clave").focus(), 100);
+  }
+  function closeModalEliminarProv() {
+    document.getElementById("modal-eliminar-prov").classList.remove("open");
+    provAEliminarId = null;
+  }
+  function confirmarEliminarProv() {
+    const clave = document.getElementById("eliminar-prov-clave").value;
+    if (clave !== PASSWORD) {
+      document.getElementById("eliminar-prov-error").textContent = "Clave incorrecta";
+      document.getElementById("eliminar-prov-clave").value = "";
+      document.getElementById("eliminar-prov-clave").focus();
+      return;
+    }
+    const p = proveedores.find(x => x.id === provAEliminarId);
+    const nombre = p?.nombre || "Proveedor";
+    proveedores = proveedores.filter(x => x.id !== provAEliminarId);
+    delete movimientos[provAEliminarId];
+    // Limpiar estados de FC del proveedor eliminado
+    const e = getEstados();
+    Object.keys(e).forEach(k => { if (k.startsWith("fc_") || k.startsWith("pago_fcs_")) delete e[k]; });
+    setEstados(e);
+    closeModalEliminarProv();
+    renderProveedores();
+    showToast(`${nombre} eliminado`, "ok");
+  }
+  function guardarProveedor() {
+    const nombre    = document.getElementById("prov-nombre").value.trim();
+    if (!nombre) return showToast("Ingresá un nombre", "error");
+    const cuit      = document.getElementById("prov-cuit").value.trim();
+    const direccion = document.getElementById("prov-direccion").value.trim();
+    const obs       = document.getElementById("prov-obs").value.trim();
+    const editId    = document.getElementById("prov-edit-id").value;
+    if (editId) {
+      const p = proveedores.find(p => String(p.id) === String(editId));
+      if (p) { p.nombre = nombre; p.cuit = cuit; p.direccion = direccion; p.obs = obs; }
+      closeModalProveedor();
+      openDetalle(selectedId);
+      showToast("Proveedor actualizado ✓");
+    } else {
+      const id = ++nextId;
+      proveedores.push({ id, nombre, cuit, direccion, obs, saldo: 0 });
+      movimientos[id] = [];
+      closeModalProveedor();
+      renderProveedores();
+      showToast("Proveedor agregado ✓");
+    }
+  }
+
+  // Config de cada tipo de comprobante
+  const TIPOS = {
+    fc:      { label: "Factura",            icon: "🧾", efecto:  1, grupo: "cargo" },
+    nd:      { label: "Nota de Débito",     icon: "📋", efecto:  1, grupo: "cargo" },
+    nc:      { label: "Nota de Crédito",    icon: "📝", efecto: -1, grupo: "abono" },
+    ret:     { label: "Ret. Ganancias",     icon: "🏛️", efecto: -1, grupo: "abono" },
+    envases: { label: "Envases",            icon: "📦", efecto: -1, grupo: "abono" },
+    pago:    { label: "Pago",               icon: "💳", efecto: -1, grupo: "abono" },
+  };
+
+  function setEstadoPagoModal(estado) {
+    document.getElementById("mov-estado-pago").value = estado;
+    document.getElementById("opt-pendiente").classList.toggle("selected", estado === "normal");
+    document.getElementById("opt-pagada").classList.toggle("selected", estado === "pagada");
+  }
+
+  function openModalMovimiento(tipo = "fc", movExistente = null) {
+    tipoMov = tipo;
+    document.getElementById("mov-edit-id").value = movExistente ? movExistente.id : "";
+
+    // Ocultar selector de tipo al editar FC (no tiene sentido cambiar una FC a pago)
+    // Pero sí mostrarlo al editar pagos/abonos para poder corregir el tipo
+    const esFC = movExistente && (tipo === "fc" || tipo === "nd");
+    document.getElementById("tipo-comp-selector").style.display = (movExistente && esFC) ? "none" : "grid";
+
+    // Mostrar toggle de estado solo al editar una FC no pagada
+    const esEdicionFC = movExistente && (tipo === "fc" || tipo === "nd");
+    document.getElementById("row-estado-pago").style.display = esEdicionFC ? "block" : "none";
+    if (esEdicionFC) {
+      const estadoActual = getEstadoFactura(movExistente.id);
+      setEstadoPagoModal(estadoActual === "pagada" ? "pagada" : "normal");
+    } else {
+      document.getElementById("mov-estado-pago").value = "normal";
+    }
+
+    // Marcar el tipo seleccionado
+    document.querySelectorAll(".tipo-comp-opt").forEach(el => {
+      el.classList.toggle("selected", el.dataset.tipo === tipo);
+    });
+    const cfg = TIPOS[tipo] || TIPOS.fc;
+    document.getElementById("modal-titulo").textContent =
+      movExistente ? "✏️ Editar " + cfg.label : cfg.icon + " " + cfg.label;
+
+    // Precargar valores si es edición
+    if (movExistente) {
+      const partes = (movExistente.fecha || "").split("/");
+      const fechaISO = partes.length === 3 ? `${partes[2]}-${partes[1].padStart(2,"0")}-${partes[0].padStart(2,"0")}` : new Date().toISOString().split("T")[0];
+      document.getElementById("mov-monto").value = movExistente.monto;
+      document.getElementById("mov-fecha").value = fechaISO;
+      document.getElementById("mov-numero").value = movExistente.numero || "";
+      document.getElementById("mov-descripcion").value = movExistente.descripcion || "";
+    } else {
+      ["mov-monto","mov-numero","mov-descripcion"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("mov-fecha").value = new Date().toISOString().split("T")[0];
+    }
+    document.getElementById("modal-movimiento").classList.add("open");
+    setTimeout(() => document.getElementById("mov-monto").focus(), 100);
+  }
+
+  // Click en selector de tipo dentro del modal
+  document.addEventListener("click", e => {
+    const opt = e.target.closest(".tipo-comp-opt");
+    if (opt) {
+      tipoMov = opt.dataset.tipo;
+      document.querySelectorAll(".tipo-comp-opt").forEach(el => el.classList.remove("selected"));
+      opt.classList.add("selected");
+      document.getElementById("modal-titulo").textContent = TIPOS[tipoMov].icon + " " + TIPOS[tipoMov].label;
+    }
+  });
+  function closeModalMovimiento() {
+    document.getElementById("modal-movimiento").classList.remove("open");
+    document.getElementById("tipo-comp-selector").style.display = "grid";
+  }
+  function guardarMovimiento() {
+    if (!tipoMov) return showToast("Elegí un tipo de comprobante", "error");
+    const monto = parseFloat(document.getElementById("mov-monto").value);
+    if (!monto || monto <= 0) return showToast("Ingresá un monto válido", "error");
+    const fecha = document.getElementById("mov-fecha").value;
+    const fechaStr = fecha ? new Date(fecha + "T12:00:00").toLocaleDateString("es-AR") : "-";
+    const cfg = TIPOS[tipoMov];
+    const editId = document.getElementById("mov-edit-id").value;
+
+    if (editId) {
+      // EDICIÓN: actualizar movimiento existente
+      const movs = movimientos[selectedId] || [];
+      const idx = movs.findIndex(m => String(m.id) === String(editId));
+      if (idx === -1) return showToast("No se encontró el movimiento", "error");
+      const old = movs[idx];
+      const cfgOld = TIPOS[old.tipo] || TIPOS.fc;
+      // Revertir efecto anterior y aplicar nuevo
+      const prov = proveedores.find(p => p.id === selectedId);
+      prov.saldo -= cfgOld.efecto * old.monto;
+      prov.saldo += cfg.efecto * monto;
+      movs[idx] = { ...old, tipo: tipoMov, monto, numero: document.getElementById("mov-numero").value.trim(), descripcion: document.getElementById("mov-descripcion").value.trim(), fecha: fechaStr };
+
+      // Si era un pago y cambió de tipo, desafectar las FC vinculadas
+      if (old.tipo === "pago" && tipoMov !== "pago") {
+        desafectarFCsDePago(old.id);
+        showToast("Tipo cambiado — FC desafectadas y vueltas a Aprobada", "ok");
+      }
+      if (tipoMov === "fc") {
+        const nuevoEstado = document.getElementById("mov-estado-pago").value;
+        const estadoActual = getEstadoFactura(editId);
+        if (nuevoEstado !== estadoActual) {
+          // Si se marca como pagada manualmente, limpiar también de aprobadas
+          if (nuevoEstado === "pagada") {
+            setEstadoFactura(Number(editId), "pagada");
+            facturasAprobadas.delete(Number(editId));
+          } else {
+            // Volver a pendiente: limpiar estado
+            const e = getEstados();
+            delete e["fc_" + editId];
+            delete e["fc_op_" + editId];
+            setEstados(e);
+            facturasAprobadas.delete(Number(editId));
+            // Revertir el efecto en saldo si antes estaba pagada
+            if (estadoActual === "pagada") {
+              // No hacemos nada con saldo: el mov ya está incluido
+            }
+          }
+        }
+      }
+      closeModalMovimiento();
+      openDetalle(selectedId);
+      showToast("Movimiento actualizado ✓");
+    } else {
+      // NUEVO movimiento — verificar duplicado para FC y ND
+      const numero = document.getElementById("mov-numero").value.trim();
+      if ((tipoMov === "fc" || tipoMov === "nd") && numero) {
+        const movsProv = movimientos[selectedId] || [];
+        const duplicado = movsProv.find(m =>
+          (m.tipo === "fc" || m.tipo === "nd") &&
+          m.numero && m.numero.trim() === numero
+        );
+        if (duplicado) {
+          const fechaDup = duplicado.fecha || "";
+          const montoDup = fmt(duplicado.monto);
+          showToast(`⚠️ Ya existe ${TIPOS[duplicado.tipo].label} N°${fmtNumFC(numero)} — ${fechaDup} — ${montoDup}`, "error");
+          // Resaltar la fila duplicada
+          const filaDup = document.getElementById("mov-row-" + duplicado.id);
+          if (filaDup) {
+            filaDup.style.transition = "all .2s";
+            filaDup.style.background = "rgba(239,68,68,.2)";
+            filaDup.style.borderColor = "var(--red)";
+            filaDup.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => {
+              filaDup.style.background = "";
+              filaDup.style.borderColor = "";
+            }, 3000);
+          }
+          return; // No guardar
+        }
+      }
+      const mov = { id: ++nextId, tipo: tipoMov, monto, numero, descripcion: document.getElementById("mov-descripcion").value.trim(), fecha: fechaStr };
+      if (!movimientos[selectedId]) movimientos[selectedId] = [];
+      movimientos[selectedId].push(mov);
+      proveedores.find(p => p.id === selectedId).saldo += cfg.efecto * monto;
+      closeModalMovimiento();
+      openDetalle(selectedId);
+      showToast(cfg.label + " registrada ✓");
+    }
+  }
+
+  document.addEventListener("click", e => {
+    if (e.target.classList.contains("modal-overlay")) { closeModalProveedor(); closeModalMovimiento(); closeModalBackup(); closeModalRestore(); closeModalConfig(); closeModalBusquedaGlobal(); closeModalFotoFC(); closeModalEliminarProv(); document.getElementById("modal-confirmar-pago").classList.remove("open"); }
+  });
+
+  // ——— FOTO FC ———
+  function abrirCamaraFC() {
+    document.getElementById("input-foto-fc").click();
+  }
+
+  function closeModalFotoFC() {
+    document.getElementById("modal-foto-fc").classList.remove("open");
+  }
+
+  async function procesarFotoFC(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    input.value = "";
+
+    document.getElementById("foto-fc-procesando").style.display = "block";
+    document.getElementById("foto-fc-resultado").style.display = "none";
+    document.getElementById("modal-foto-fc").classList.add("open");
+
+    const esPDF = file.type === "application/pdf";
+
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(",")[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+
+    // Preview: PDF muestra ícono, imagen muestra la foto
+    if (esPDF) {
+      document.getElementById("foto-fc-preview").src = "";
+      document.getElementById("foto-fc-preview").style.display = "none";
+      document.getElementById("foto-fc-preview").insertAdjacentHTML("afterend",
+        `<div id="pdf-preview-placeholder" style="text-align:center;padding:16px;background:var(--surface2);border-radius:10px;margin-bottom:14px">
+          <div style="font-size:2.5rem">📄</div>
+          <div style="color:var(--muted);font-size:.82rem;margin-top:4px">${file.name}</div>
+        </div>`
+      );
+    } else {
+      document.getElementById("foto-fc-preview").src = `data:${file.type};base64,${base64}`;
+      document.getElementById("foto-fc-preview").style.display = "block";
+      const ph = document.getElementById("pdf-preview-placeholder");
+      if (ph) ph.remove();
+    }
+
+    try {
+      const apiKey = sessionStorage.getItem("cp_apikey") || "";
+      if (!apiKey) {
+        document.getElementById("foto-fc-error").textContent = "⚙️ Necesitás configurar tu API Key de Google Gemini. Tocá el ícono ⚙️ en el header.";
+        document.getElementById("foto-fc-error").style.display = "block";
+        document.getElementById("foto-fc-procesando").style.display = "none";
+        document.getElementById("foto-fc-resultado").style.display = "block";
+        return;
+      }
+
+      const prov = proveedores.find(p => p.id === selectedId);
+      const prompt = `Esta es una factura o comprobante del proveedor "${prov?.nombre || ""}". Extraé los datos y respondé SOLO con un JSON válido sin markdown:\n{"tipo":"fc","numero":"0001-00012345","fecha":"2026-03-12","monto":15000.00,"descripcion":"descripción breve"}\nPara tipo: "fc"=Factura, "nd"=Nota de Débito, "nc"=Nota de Crédito, "ret"=Retención. Fecha en YYYY-MM-DD. Monto como número sin símbolos (total final). Si no podés leer algún dato ponelo vacío o 0.`;
+
+      // Gemini soporta imagen y PDF con el mismo formato inline_data
+      const parte = {
+        inline_data: {
+          mime_type: esPDF ? "application/pdf" : (file.type || "image/jpeg"),
+          data: base64
+        }
+      };
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [ parte, { text: prompt } ] }]
+          })
+        }
+      );
+
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      let extraido = {};
+      try { extraido = JSON.parse(texto.replace(/```json|```/g, "").trim()); } catch {}
+
+      document.getElementById("foto-tipo").value        = extraido.tipo || "fc";
+      document.getElementById("foto-fecha").value       = extraido.fecha || new Date().toISOString().split("T")[0];
+      document.getElementById("foto-numero").value      = extraido.numero || "";
+      document.getElementById("foto-monto").value       = extraido.monto || "";
+      document.getElementById("foto-descripcion").value = extraido.descripcion || "";
+      document.getElementById("foto-fc-error").style.display = "none";
+
+    } catch (err) {
+      document.getElementById("foto-fc-error").textContent = "No se pudo analizar el archivo: " + (err.message || "error desconocido") + ". Completá los datos manualmente.";
+      document.getElementById("foto-fc-error").style.display = "block";
+      document.getElementById("foto-tipo").value  = "fc";
+      document.getElementById("foto-fecha").value = new Date().toISOString().split("T")[0];
+      ["foto-numero","foto-monto","foto-descripcion"].forEach(id => document.getElementById(id).value = "");
+    }
+
+    document.getElementById("foto-fc-procesando").style.display = "none";
+    document.getElementById("foto-fc-resultado").style.display = "block";
+  }
+
+  function confirmarFotoFC() {
+    const monto = parseFloat(document.getElementById("foto-monto").value);
+    if (!monto || monto <= 0) return showToast("Ingresá un monto válido", "error");
+    const tipo     = document.getElementById("foto-tipo").value;
+    const fecha    = document.getElementById("foto-fecha").value;
+    const fechaStr = fecha ? new Date(fecha + "T12:00:00").toLocaleDateString("es-AR") : new Date().toLocaleDateString("es-AR");
+    const cfg      = TIPOS[tipo] || TIPOS.fc;
+    const mov = {
+      id: ++nextId, tipo, monto,
+      numero:      document.getElementById("foto-numero").value.trim(),
+      descripcion: document.getElementById("foto-descripcion").value.trim(),
+      fecha:       fechaStr
+    };
+    if (!movimientos[selectedId]) movimientos[selectedId] = [];
+    movimientos[selectedId].push(mov);
+    proveedores.find(p => p.id === selectedId).saldo += cfg.efecto * monto;
+    closeModalFotoFC();
+    openDetalle(selectedId);
+    showToast(cfg.label + " cargada desde foto ✓");
+  }
+
+  let filtroPendientes = false;
+  let filtroAprobadas = false;
+
+  function toggleResaltadoPago(checkbox, pagoId, fcIds) {
+    if (checkbox.checked) {
+      document.getElementById("mov-row-" + pagoId)?.classList.add("pago-hover");
+      fcIds.forEach(id => document.getElementById("mov-row-" + id)?.classList.add("fc-linked"));
+    } else {
+      document.getElementById("mov-row-" + pagoId)?.classList.remove("pago-hover");
+      fcIds.forEach(id => document.getElementById("mov-row-" + id)?.classList.remove("fc-linked"));
+    }
+  }
+  function resaltarFCsVinculadas(pagoId, fcIds) {
+    document.getElementById("mov-row-" + pagoId)?.classList.add("pago-hover");
+    fcIds.forEach(id => document.getElementById("mov-row-" + id)?.classList.add("fc-linked"));
+  }
+  function limpiarResaltado() {
+    document.querySelectorAll(".pago-hover, .fc-linked").forEach(el => {
+      el.classList.remove("pago-hover", "fc-linked");
+    });
+  }
+
+  function toggleFiltroAprobadas() {
+    filtroAprobadas = !filtroAprobadas;
+    const btn = document.getElementById("btn-filtro-aprobadas");
+    if (filtroAprobadas) {
+      btn.style.background = "rgba(59,130,246,.15)";
+      btn.style.borderColor = "var(--accent)";
+      btn.style.color = "var(--accent2)";
+    } else {
+      btn.style.background = "none";
+      btn.style.borderColor = "var(--border)";
+      btn.style.color = "var(--muted)";
+    }
+    renderProveedores();
+  }
+
+  function toggleFiltroPendientes() {
+    filtroPendientes = !filtroPendientes;
+    const btn = document.getElementById("btn-filtro-pendientes");
+    if (filtroPendientes) {
+      btn.style.background = "rgba(59,130,246,.2)";
+      btn.style.borderColor = "var(--accent)";
+      btn.style.color = "var(--accent2)";
+      btn.textContent = "📋 Solo pendientes ✓";
+    } else {
+      btn.style.background = "none";
+      btn.style.borderColor = "var(--border)";
+      btn.style.color = "var(--muted)";
+      btn.textContent = "📋 Solo pendientes";
+    }
+    renderMovimientos();
+  }
+  function openModalBusquedaGlobal() {
+    document.getElementById("input-busqueda-global").value = "";
+    document.getElementById("resultados-busqueda-global").innerHTML = `<div style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">Escribí para buscar...</div>`;
+    document.getElementById("modal-busqueda-global").classList.add("open");
+    setTimeout(() => document.getElementById("input-busqueda-global").focus(), 100);
+  }
+  function closeModalBusquedaGlobal() { document.getElementById("modal-busqueda-global").classList.remove("open"); }
+
+  function ejecutarBusquedaGlobal() {
+    const q = document.getElementById("input-busqueda-global").value.toLowerCase().trim();
+    const container = document.getElementById("resultados-busqueda-global");
+    if (!q) { container.innerHTML = `<div style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">Escribí para buscar...</div>`; return; }
+
+    const resultados = [];
+    proveedores.forEach(prov => {
+      const movs = movimientos[prov.id] || [];
+      movs.forEach(m => {
+        const cfg = TIPOS[m.tipo] || TIPOS.fc;
+        const haystack = [m.numero, m.descripcion, cfg.label, fmtNumFC(m.numero||"")].filter(Boolean).join(" ").toLowerCase();
+        if (haystack.includes(q)) resultados.push({ prov, m, cfg });
+      });
+    });
+
+    if (!resultados.length) {
+      container.innerHTML = `<div style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">Sin resultados para "<strong>${q}</strong>"</div>`;
+      return;
+    }
+
+    container.innerHTML = resultados.map(({ prov, m, cfg }) => {
+      const signo = cfg.efecto === 1 ? "+" : "-";
+      const clsM = cfg.efecto === 1 ? "color:#fca5a5" : "color:#86efac";
+      const nroStr = m.numero ? ` N°${fmtNumFC(m.numero)}` : "";
+      return `<div onclick="irAMovimiento(${prov.id},${m.id})"
+        style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid var(--border);margin-bottom:6px;background:var(--surface2)" 
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:1.3rem">${cfg.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:.9rem">${cfg.label}${nroStr}</div>
+          <div style="color:var(--muted);font-size:.78rem">${prov.nombre}${m.descripcion ? " · " + m.descripcion : ""} · ${m.fecha}</div>
+        </div>
+        <div style="font-weight:700;font-size:.9rem;${clsM}">${signo}${fmt(m.monto)}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function irAMovimiento(provId, movId) {
+    closeModalBusquedaGlobal();
+    openDetalle(provId);
+    // Resaltar el movimiento después de renderizar
+    setTimeout(() => {
+      const el = document.getElementById("mov-row-" + movId);
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.style.outline = "2px solid var(--accent)"; setTimeout(() => el.style.outline = "", 2000); }
+    }, 150);
+  }
+
+  // ——— CONFIGURACIÓN ———
+  function getNombreEmpresa() {
+    return sessionStorage.getItem("cp_empresa") || "mi empresa";
+  }
+  function openModalConfig() {
+    document.getElementById("cfg-empresa").value = sessionStorage.getItem("cp_empresa") || "";
+    document.getElementById("cfg-apikey").value  = sessionStorage.getItem("cp_apikey")  || "";
+    document.getElementById("modal-config").classList.add("open");
+    setTimeout(() => document.getElementById("cfg-empresa").focus(), 100);
+  }
+  function closeModalConfig() { document.getElementById("modal-config").classList.remove("open"); }
+  function guardarConfig() {
+    const nombre = document.getElementById("cfg-empresa").value.trim();
+    const apikey = document.getElementById("cfg-apikey").value.trim();
+    if (nombre) sessionStorage.setItem("cp_empresa", nombre); else sessionStorage.removeItem("cp_empresa");
+    if (apikey) sessionStorage.setItem("cp_apikey",  apikey); else sessionStorage.removeItem("cp_apikey");
+    closeModalConfig();
+    renderProveedores();
+    if (selectedId) openDetalle(selectedId);
+    showToast("Configuración guardada ✓");
+  }
+  function openModalBackup()  { document.getElementById("modal-backup").classList.add("open"); }
+  function closeModalBackup() { document.getElementById("modal-backup").classList.remove("open"); }
+
+  function exportarBackup() {
+    const data = { version: 1, fecha: new Date().toISOString(), proveedores, movimientos };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const fechaStr = new Date().toLocaleDateString("es-AR").replace(/\//g, "-");
+    a.href = url; a.download = `cuentaspro-backup-${fechaStr}.json`;
+    a.click(); URL.revokeObjectURL(url);
+    closeModalBackup();
+    showToast("Backup descargado ✓");
+  }
+
+  // ——— RESTORE ———
+  let archivoRestore = null;
+
+  function openModalRestore() {
+    closeModalBackup();
+    archivoRestore = null;
+    document.getElementById("file-selected").style.display = "none";
+    document.getElementById("file-selected").textContent = "✓ Archivo listo";
+    document.getElementById("file-input").value = "";
+    document.getElementById("modal-restore").classList.add("open");
+  }
+  function closeModalRestore() { document.getElementById("modal-restore").classList.remove("open"); }
+
+  function handleFileSelect(input) {
+    if (input.files[0]) {
+      archivoRestore = input.files[0];
+      document.getElementById("file-selected").textContent = "✓ " + archivoRestore.name;
+      document.getElementById("file-selected").style.display = "block";
+    }
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById("file-drop").classList.remove("drag");
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith(".json")) {
+      archivoRestore = file;
+      document.getElementById("file-selected").textContent = "✓ " + file.name;
+      document.getElementById("file-selected").style.display = "block";
+    } else {
+      showToast("Solo se aceptan archivos .json", "error");
+    }
+  }
+
+  function restaurarBackup() {
+    if (!archivoRestore) return showToast("Elegí un archivo primero", "error");
+    const modo = document.querySelector('input[name="restore-mode"]:checked').value;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!data.proveedores || !data.movimientos) throw new Error("Formato inválido");
+        if (modo === "reemplazar") {
+          if (!confirm("¿Seguro? Esto va a borrar todos los datos actuales y cargar el backup.")) return;
+          proveedores = data.proveedores;
+          movimientos = data.movimientos;
+        } else {
+          // Agregar: evitar duplicados por id
+          const idsExistentes = new Set(proveedores.map(p => p.id));
+          data.proveedores.forEach(p => { if (!idsExistentes.has(p.id)) proveedores.push(p); });
+          Object.keys(data.movimientos).forEach(k => {
+            if (!movimientos[k]) movimientos[k] = [];
+            const idsMovExist = new Set(movimientos[k].map(m => m.id));
+            data.movimientos[k].forEach(m => { if (!idsMovExist.has(m.id)) movimientos[k].push(m); });
+          });
+        }
+        closeModalRestore();
+        renderProveedores();
+        showToast("Backup restaurado ✓");
+      } catch(err) {
+        showToast("Archivo inválido o corrupto", "error");
+      }
+    };
+    reader.readAsText(archivoRestore);
+  }
+
+  if (logueado) renderProveedores();
+</script>
+
+<!-- SheetJS para leer XLS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  // ——— IMPORTAR XLS ———
+  let xlsArchivos = [];
+
+  function openModalXLS() {
+    closeModalBackup();
+    xlsArchivos = [];
+    document.getElementById("xls-lista").innerHTML = "";
+    document.getElementById("xls-input").value = "";
+    document.getElementById("btn-importar-xls").disabled = true;
+    document.getElementById("btn-importar-xls").style.opacity = ".5";
+    document.getElementById("modal-xls").classList.add("open");
+  }
+  function closeModalXLS() { document.getElementById("modal-xls").classList.remove("open"); }
+
+  function handleXLSSelect(input) {
+    xlsArchivos = Array.from(input.files);
+    renderXLSLista();
+  }
+  function handleXLSDrop(e) {
+    e.preventDefault();
+    document.getElementById("xls-drop").classList.remove("drag");
+    xlsArchivos = Array.from(e.dataTransfer.files).filter(f => f.name.match(/\.xlsx?$/i));
+    if (!xlsArchivos.length) return showToast("Solo se aceptan archivos .xls o .xlsx", "error");
+    renderXLSLista();
+  }
+
+  function renderXLSLista() {
+    const lista = document.getElementById("xls-lista");
+    if (!xlsArchivos.length) { lista.innerHTML = ""; return; }
+    lista.innerHTML = xlsArchivos.map(f => {
+      const nombre = limpiarNombreProveedor(f.name);
+      return `<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:.85rem;">
+        <span>📊</span>
+        <div><div style="font-weight:600">${nombre}</div><div style="color:var(--muted);font-size:.75rem">${f.name}</div></div>
+      </div>`;
+    }).join("");
+    document.getElementById("btn-importar-xls").disabled = false;
+    document.getElementById("btn-importar-xls").style.opacity = "1";
+  }
+
+  function limpiarNombreProveedor(filename) {
+    // Quita extensión y caracteres raros tipo "_N5-30_", guiones bajos, números al final
+    return filename
+      .replace(/\.xlsx?$/i, "")
+      .replace(/_N\d+[-\d]*_?/gi, "")
+      .replace(/__+/g, " ")
+      .replace(/_/g, " ")
+      .replace(/\(\d+\)/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async function importarXLS() {
+    if (!xlsArchivos.length) return;
+    let importados = 0;
+    let errores = 0;
+
+    for (const archivo of xlsArchivos) {
+      try {
+        const buffer = await archivo.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: "array", cellDates: true });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+        let nombre = limpiarNombreProveedor(archivo.name);
+        let cuitImportado = "";
+        let direccionImportada = "";
+
+        // Buscar Razón Social y CUIT en las filas antes del encabezado
+        // Buscar fila de encabezados (contiene "Fecha" o "Comprobante")
+        let headerRow = -1;
+        for (let i = 0; i < Math.min(rows.length, 20); i++) {
+          const row = rows[i].map(c => String(c).toLowerCase());
+          if (row.some(c => c.includes("fecha")) && row.some(c => c.includes("comprobante") || c.includes("debe") || c.includes("haber"))) {
+            headerRow = i;
+            break;
+          }
+        }
+        if (headerRow === -1) { errores++; continue; }
+
+        // Escanear filas previas buscando Razón Social y CUIT
+        // El valor puede estar en cualquier columna de la misma fila, no solo j+1
+        for (let i = 0; i < headerRow; i++) {
+          const row = rows[i];
+          const rowStr = row.map(c => String(c).trim());
+          for (let j = 0; j < rowStr.length; j++) {
+            const key = rowStr[j].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (!key) continue;
+            // Buscar el primer valor no vacío después de la clave
+            const val = rowStr.slice(j + 1).find(v => v && v !== "0") || "";
+            if (key.includes("razon social") || key === "razon" || key.includes("empresa")) {
+              if (val) nombre = val;
+            }
+            // C.U.I.T. puede venir como "C.U.I.T.", "c.u.i.t", etc.
+            if (/c[\.\s]?u[\.\s]?i[\.\s]?t/.test(key)) {
+              if (val) cuitImportado = val;
+            }
+            // A veces el CUIT está solo en la celda sin label previo (ej: "30-67316438-9")
+            if (/^\d{2}-\d{7,8}-\d$/.test(rowStr[j])) {
+              cuitImportado = rowStr[j];
+            }
+            // Nombre de la empresa puede aparecer luego de "Razón Social" como columna header
+            if (key === "razon social" || key === "razon social:") {
+              if (val) nombre = val;
+            }
+          }
+        }
+
+        const headers = rows[headerRow].map(c =>
+          String(c).toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        );
+        const iFecha    = headers.findIndex(h => h.includes("fecha"));
+        const iComp     = headers.findIndex(h => h.includes("comprobante") || h.includes("concepto") || h.includes("detalle"));
+        const iNro      = headers.findIndex(h => h === "numero" || h === "nro" || h === "n°" || h === "num" || h.startsWith("numer"));
+        const iDebe     = headers.findIndex(h => h === "debe" || h.includes("debe"));
+        const iHaber    = headers.findIndex(h => h === "haber" || h.includes("haber"));
+        const iSaldo    = headers.findIndex(h => h === "saldo" || h.includes("saldo"));
+        const iObs      = headers.findIndex(h => h.includes("observ") || h.includes("obs"));
+
+        // Si Razón Social y CUIT son columnas de la tabla, leerlos de la primera fila de datos
+        const iRazon  = headers.findIndex(h => h.includes("razon social") || h === "razon");
+        const iCuit   = headers.findIndex(h => /c\.?u\.?i\.?t/.test(h));
+        const iDirec  = headers.findIndex(h => h.includes("direcc") || h === "domicilio");
+        if ((iRazon >= 0 || iCuit >= 0 || iDirec >= 0) && rows[headerRow + 1]) {
+          const primeraDato = rows[headerRow + 1];
+          if (iRazon >= 0 && primeraDato[iRazon]) nombre = String(primeraDato[iRazon]).trim();
+          if (iCuit  >= 0 && primeraDato[iCuit])  cuitImportado = String(primeraDato[iCuit]).trim();
+          if (iDirec >= 0 && primeraDato[iDirec]) direccionImportada = String(primeraDato[iDirec]).trim();
+        }
+
+        const movsProv = [];
+        let saldoFinal = 0;
+
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || row.every(c => c === "" || c === null)) continue;
+
+          const comprobante = String(row[iComp] || "").trim();
+          if (!comprobante) continue;
+
+          // Determinar tipo: Factura → FC, el resto → pago
+          const esFactura = /factura/i.test(comprobante);
+          const tipo = esFactura ? "fc" : "pago";
+
+          // Monto: factura usa Debe, pago usa Haber
+          let monto = 0;
+          if (esFactura && iDebe >= 0) {
+            monto = parseMonto(row[iDebe]);
+          } else if (!esFactura && iHaber >= 0) {
+            monto = parseMonto(row[iHaber]);
+          }
+          // Fallback: si no hay debe/haber separados, usar el que tenga valor
+          if (!monto && iDebe >= 0) monto = parseMonto(row[iDebe]);
+          if (!monto && iHaber >= 0) monto = parseMonto(row[iHaber]);
+          if (!monto) continue;
+
+          // Fecha
+          let fechaStr = "-";
+          if (iFecha >= 0 && row[iFecha]) {
+            const f = row[iFecha];
+            if (f instanceof Date) {
+              fechaStr = f.toLocaleDateString("es-AR");
+            } else {
+              fechaStr = String(f).trim();
+            }
+          }
+
+          // Saldo acumulado
+          if (iSaldo >= 0) saldoFinal = parseMonto(row[iSaldo]) || saldoFinal;
+          else saldoFinal += esFactura ? monto : -monto;
+
+          // Número: primero la columna "Número", si no extraer del comprobante
+          const numeroRaw = iNro >= 0 && row[iNro] ? String(row[iNro]).trim() : "";
+          const numero = numeroRaw || extraerNumero(comprobante);
+
+          movsProv.push({
+            id: ++nextId,
+            tipo,
+            monto,
+            numero,
+            descripcion: comprobante + (iObs >= 0 && row[iObs] ? " — " + String(row[iObs]).trim() : ""),
+            fecha: fechaStr
+          });
+        }
+
+        // Calcular saldo real desde movimientos
+        const saldoCalc = movsProv.reduce((s, m) => s + (TIPOS[m.tipo]?.efecto || 1) * m.monto, 0);
+
+        // Verificar si ya existe el proveedor (por nombre similar)
+        const existe = proveedores.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+        if (existe) {
+          movimientos[existe.id] = movsProv;
+          existe.saldo = saldoCalc;
+          if (cuitImportado)       existe.cuit      = cuitImportado;
+          if (direccionImportada)  existe.direccion = direccionImportada;
+        } else {
+          const id = ++nextId;
+          proveedores.push({ id, nombre, cuit: cuitImportado, direccion: direccionImportada, obs: "", saldo: saldoCalc });
+          movimientos[id] = movsProv;
+        }
+        importados++;
+      } catch(e) {
+        console.error("Error importando", archivo.name, e);
+        errores++;
+      }
+    }
+
+    closeModalXLS();
+    renderProveedores();
+
+    if (importados > 0 && errores === 0)
+      showToast(`${importados} proveedor${importados > 1 ? "es" : ""} importado${importados > 1 ? "s" : ""} ✓`);
+    else if (importados > 0)
+      showToast(`${importados} importados, ${errores} con error`, "error");
+    else
+      showToast("No se pudo importar ningún archivo", "error");
+  }
+
+  function parseMonto(val) {
+    if (!val && val !== 0) return 0;
+    if (typeof val === "number") return Math.abs(val);
+    const str = String(val).replace(/\./g, "").replace(",", ".").replace(/[^0-9.]/g, "");
+    return Math.abs(parseFloat(str) || 0);
+  }
+
+  function extraerNumero(comprobante) {
+    const m = comprobante.match(/[\d]{4,}/);
+    return m ? m[0] : "";
+  }
+
+  // Inicializar app cuando el DOM esté listo
+  document.addEventListener("DOMContentLoaded", () => {
+    try {
+      if (logueado) {
+        document.getElementById("login-screen").style.display = "none";
+        document.getElementById("app").style.display = "flex";
+        renderProveedores();
+      }
+    } catch(e) {
+      console.error("Error al inicializar:", e);
+    }
+  });
+</script>
+</body>
+</html>
