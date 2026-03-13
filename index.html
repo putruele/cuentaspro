@@ -343,6 +343,11 @@
           style="white-space:nowrap;padding:0 12px;height:44px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s">
           ✅ Con FC
         </button>
+        <button onclick="abrirEscaneoGlobal()" title="Escanear FC"
+          style="white-space:nowrap;padding:0 12px;height:44px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--muted);font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0;transition:all .15s">
+          📷
+        </button>
+        <input type="file" id="input-escaneo-global" accept="image/*,application/pdf" style="display:none" onchange="procesarEscaneoGlobal(this)" />
         <button class="btn-fab" onclick="openModalProveedor()">+</button>
       </div>
     </div>
@@ -412,6 +417,32 @@
 
 <!-- Área oculta para impresión -->
 <div id="print-area" style="display:none"></div>
+
+<!-- MODAL RESOLVER PROVEEDOR ESCANEO -->
+<div class="modal-overlay" id="modal-resolver-prov">
+  <div class="modal">
+    <div class="modal-title">🔍 Proveedor no encontrado</div>
+    <div id="resolver-prov-nombre" style="text-align:center;padding:8px 0 16px;color:var(--text);font-size:1rem"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-save" onclick="resolverCrearNuevo()" style="padding:13px">➕ Crear proveedor nuevo</button>
+      <button class="btn-cancel" onclick="resolverVincularExistente()" style="padding:12px;text-align:center">🔗 Vincular a proveedor existente</button>
+      <button class="btn-cancel" onclick="resolverCargarSinProveedor()" style="padding:12px;text-align:center;font-size:.82rem">📋 Cargar sin asignar proveedor</button>
+      <button class="btn-cancel" onclick="closeModalResolverProv()" style="padding:10px;text-align:center;font-size:.82rem;opacity:.6">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VINCULAR PROVEEDOR -->
+<div class="modal-overlay" id="modal-vincular-prov">
+  <div class="modal">
+    <div class="modal-title">🔗 Vincular a proveedor</div>
+    <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">Seleccioná a cuál proveedor corresponde esta FC</div>
+    <input type="text" id="input-vincular-buscar" placeholder="🔍 Buscar..." oninput="renderListaVincular()"
+      style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:.9rem;outline:none;font-family:inherit;margin-bottom:10px" />
+    <div id="lista-vincular" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <button class="btn-cancel" onclick="closeModalVincularProv()" style="padding:10px;text-align:center;font-size:.82rem;margin-top:12px;width:100%">Cancelar</button>
+  </div>
+</div>
 
 <!-- MODAL ELIMINAR PROVEEDOR -->
 <div class="modal-overlay" id="modal-eliminar-prov">
@@ -1432,9 +1463,15 @@
       proveedores.push({ id, nombre, cuit, direccion, obs, saldo: 0 });
       movimientos[id] = [];
       closeModalProveedor();
-      renderProveedores();
-      showToast("Proveedor agregado ✓");
-      guardarEnFirebase();
+      // Si había un escaneo pendiente, cargar la FC en el nuevo proveedor
+      if (window._pendingEscaneo && _escaneoGlobalData) {
+        window._pendingEscaneo = false;
+        cargarEscaneoEnProveedor(id);
+      } else {
+        renderProveedores();
+        showToast("Proveedor agregado ✓");
+        guardarEnFirebase();
+      }
     }
   }
 
@@ -1604,10 +1641,171 @@
   }
 
   document.addEventListener("click", e => {
-    if (e.target.classList.contains("modal-overlay")) { closeModalProveedor(); closeModalMovimiento(); closeModalBackup(); closeModalRestore(); closeModalConfig(); closeModalBusquedaGlobal(); closeModalFotoFC(); closeModalEliminarProv(); document.getElementById("modal-confirmar-pago").classList.remove("open"); }
+    if (e.target.classList.contains("modal-overlay")) { closeModalProveedor(); closeModalMovimiento(); closeModalBackup(); closeModalRestore(); closeModalConfig(); closeModalBusquedaGlobal(); closeModalFotoFC(); closeModalEliminarProv(); closeModalResolverProv(); closeModalVincularProv(); document.getElementById("modal-confirmar-pago").classList.remove("open"); }
   });
 
-  // ——— FOTO FC ———
+  // ——— ESCANEO GLOBAL DESDE LISTA ———
+  let _escaneoGlobalData = null; // datos extraídos por Gemini
+
+  function abrirEscaneoGlobal() {
+    document.getElementById("input-escaneo-global").click();
+  }
+
+  async function procesarEscaneoGlobal(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    input.value = "";
+
+    const apiKey = sessionStorage.getItem("cp_apikey") || "";
+    if (!apiKey) return showToast("⚙️ Configurá tu API Key de Gemini primero", "error");
+
+    showToast("⏳ Analizando comprobante...", "ok");
+
+    const esPDF = file.type === "application/pdf";
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
+    });
+
+    const prompt = `Esta es una factura o comprobante. Extraé los datos y respondé SOLO con un JSON válido sin markdown:
+{"proveedor":"Nombre del proveedor o empresa emisora","tipo":"fc","numero":"0001-00012345","fecha":"2026-03-12","monto":15000.00,"descripcion":"descripción breve"}
+Para tipo: "fc"=Factura, "nd"=Nota de Débito, "nc"=Nota de Crédito, "ret"=Retención.
+Fecha en YYYY-MM-DD. Monto como número sin símbolos (total final a pagar).
+El campo "proveedor" es el nombre de quien EMITE el comprobante (el vendedor, no el comprador).
+Si no podés leer algún dato ponelo vacío o 0.`;
+
+    const parte = { inline_data: { mime_type: esPDF ? "application/pdf" : (file.type || "image/jpeg"), data: base64 } };
+    const modelos = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
+
+    let data = null, ultimoError = "";
+    for (const modelo of modelos) {
+      try {
+        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`,
+          { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [parte, { text: prompt }] }] }) });
+        data = await resp.json();
+        if (data.error) { ultimoError = data.error.message; data = null; continue; }
+        break;
+      } catch(e) { ultimoError = e.message; }
+    }
+
+    if (!data) return showToast("Error al analizar: " + ultimoError, "error");
+
+    const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    let extraido = {};
+    try { extraido = JSON.parse(texto.replace(/```json|```/g, "").trim()); } catch {}
+
+    _escaneoGlobalData = extraido;
+
+    // Buscar proveedor por nombre (búsqueda flexible)
+    const nombreDetectado = (extraido.proveedor || "").trim();
+    if (!nombreDetectado) {
+      // No detectó proveedor — abrir lista para seleccionar
+      _escaneoGlobalData._sinProveedor = true;
+      document.getElementById("resolver-prov-nombre").innerHTML = `<span style="color:var(--muted)">No se pudo detectar el nombre del proveedor</span>`;
+      document.getElementById("modal-resolver-prov").classList.add("open");
+      return;
+    }
+
+    // Buscar coincidencia exacta o parcial
+    const nombreLower = nombreDetectado.toLowerCase();
+    const exacto = proveedores.find(p => p.nombre.toLowerCase() === nombreLower);
+    const parcial = proveedores.find(p =>
+      p.nombre.toLowerCase().includes(nombreLower) ||
+      nombreLower.includes(p.nombre.toLowerCase())
+    );
+    const encontrado = exacto || parcial;
+
+    if (encontrado) {
+      // Proveedor encontrado — cargar directo
+      cargarEscaneoEnProveedor(encontrado.id);
+    } else {
+      // No encontrado — preguntar qué hacer
+      document.getElementById("resolver-prov-nombre").innerHTML =
+        `Gemini detectó: <strong style="color:var(--accent2)">"${nombreDetectado}"</strong><br>
+        <span style="color:var(--muted);font-size:.82rem">No existe en tu lista de proveedores</span>`;
+      document.getElementById("modal-resolver-prov").classList.add("open");
+    }
+  }
+
+  function cargarEscaneoEnProveedor(provId) {
+    const d = _escaneoGlobalData;
+    if (!d) return;
+    const cfg = TIPOS[d.tipo] || TIPOS.fc;
+    const fechaStr = d.fecha ? new Date(d.fecha + "T12:00:00").toLocaleDateString("es-AR") : new Date().toLocaleDateString("es-AR");
+    const mov = { id: ++nextId, tipo: d.tipo || "fc", monto: parseFloat(d.monto) || 0, numero: d.numero || "", descripcion: d.descripcion || "", fecha: fechaStr };
+
+    // Validar duplicado
+    const movsProv = movimientos[provId] || [];
+    if (mov.numero && (mov.tipo === "fc" || mov.tipo === "nd")) {
+      const dup = movsProv.find(m => (m.tipo === "fc" || m.tipo === "nd") && m.numero && m.numero.trim() === mov.numero.trim());
+      if (dup) {
+        showToast(`⚠️ Ya existe ${TIPOS[dup.tipo].label} N°${fmtNumFC(mov.numero)}`, "error");
+        closeModalResolverProv();
+        return;
+      }
+    }
+
+    if (!movimientos[provId]) movimientos[provId] = [];
+    movimientos[provId].push(mov);
+    proveedores.find(p => p.id === provId).saldo += cfg.efecto * mov.monto;
+    guardarEnFirebase();
+    closeModalResolverProv();
+    closeModalVincularProv();
+    const prov = proveedores.find(p => p.id === provId);
+    showToast(`${cfg.label} cargada en ${prov.nombre} ✓`);
+    renderProveedores();
+    _escaneoGlobalData = null;
+  }
+
+  function resolverCrearNuevo() {
+    closeModalResolverProv();
+    const nombre = _escaneoGlobalData?.proveedor || "";
+    // Abrir modal de proveedor con el nombre prellenado
+    openModalProveedor();
+    setTimeout(() => {
+      document.getElementById("prov-nombre").value = nombre;
+      // Guardar callback para cargar la FC al guardar el proveedor
+      window._pendingEscaneo = true;
+    }, 100);
+  }
+
+  function resolverVincularExistente() {
+    closeModalResolverProv();
+    renderListaVincular();
+    document.getElementById("modal-vincular-prov").classList.add("open");
+  }
+
+  function resolverCargarSinProveedor() {
+    closeModalResolverProv();
+    // Abrir lista para seleccionar manualmente
+    renderListaVincular();
+    document.getElementById("modal-vincular-prov").classList.add("open");
+  }
+
+  function closeModalResolverProv() {
+    document.getElementById("modal-resolver-prov").classList.remove("open");
+  }
+
+  function closeModalVincularProv() {
+    document.getElementById("modal-vincular-prov").classList.remove("open");
+    document.getElementById("input-vincular-buscar").value = "";
+  }
+
+  function renderListaVincular() {
+    const q = (document.getElementById("input-vincular-buscar")?.value || "").toLowerCase();
+    const lista = document.getElementById("lista-vincular");
+    const filtrados = proveedores.filter(p => p.nombre.toLowerCase().includes(q)).slice(0, 20);
+    lista.innerHTML = filtrados.map(p => `
+      <div onclick="cargarEscaneoEnProveedor(${p.id})"
+        style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s"
+        onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:.9rem">${p.nombre}</div>
+        ${p.cuit ? `<div style="color:var(--muted);font-size:.75rem">${p.cuit}</div>` : ""}
+      </div>`).join("");
+  }
+
+  // Hook: al guardar proveedor nuevo desde escaneo, cargar la FC pendiente
+  const _origGuardarProveedor = typeof guardarProveedor === "function" ? guardarProveedor : null;
   function abrirCamaraFC() {
     document.getElementById("input-foto-fc").click();
   }
