@@ -935,7 +935,8 @@
 
   function renderProveedores() {
     const filtro = (document.getElementById("input-buscar")?.value || "").toLowerCase();
-    let filtered = proveedores.filter(p => p.nombre.toLowerCase().includes(filtro));
+    let filtered = proveedores.filter(p => p.nombre.toLowerCase().includes(filtro))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
     // Filtro FC aprobadas
     if (filtroAprobadas) {
@@ -1085,7 +1086,7 @@
     });
 
     // Mostrar en orden inverso (más reciente primero)
-    const movs = movsOrig.slice().reverse();
+    const movs = movsOrig.slice(); // más viejo primero (orden original de carga)
 
     lista.innerHTML = movs.map(m => {
       const cfg    = TIPOS[m.tipo] || TIPOS.fc;
