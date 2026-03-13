@@ -1656,7 +1656,7 @@
     const file = input.files[0];
     input.value = "";
 
-    const apiKey = sessionStorage.getItem("cp_apikey") || "";
+    const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCocYmtRP3VnkfIpYnUvL-geAId0a-l46I";
     if (!apiKey) return showToast("⚙️ Configurá tu API Key de Gemini primero", "error");
 
     showToast("⏳ Analizando comprobante...", "ok");
@@ -1675,6 +1675,7 @@ REGLAS IMPORTANTES:
 - Si ves dos empresas, tomá la que aparece en el ENCABEZADO SUPERIOR como emisor (tiene CUIT, domicilio fiscal, condición IVA del vendedor).
 - tipo: "fc"=Factura A/B/C, "nd"=Nota de Débito, "nc"=Nota de Crédito, "ret"=Retención
 - fecha en YYYY-MM-DD
+- "numero": solo el número de comprobante, SIN el punto de venta. Ejemplo: si ves "0003-00000905" ponés solo "00000905". Si ves "A-0003/00018606" ponés solo "00018606"
 - monto: el TOTAL final del comprobante, como número sin símbolos
 - Si no podés leer algún dato ponelo vacío o 0`;
 
@@ -1741,7 +1742,14 @@ REGLAS IMPORTANTES:
     if (!d) return;
     const cfg = TIPOS[d.tipo] || TIPOS.fc;
     const fechaStr = d.fecha ? new Date(d.fecha + "T12:00:00").toLocaleDateString("es-AR") : new Date().toLocaleDateString("es-AR");
-    const mov = { id: ++nextId, tipo: d.tipo || "fc", monto: parseFloat(d.monto) || 0, numero: d.numero || "", descripcion: d.descripcion || "", fecha: fechaStr };
+    // Limpiar número: sacar punto de venta si viene con formato "0003-00000905" o "A-0003/00018606"
+    let numeroLimpio = (d.numero || "").trim();
+    if (numeroLimpio.includes("-") || numeroLimpio.includes("/")) {
+      const partes = numeroLimpio.split(/[-\/]/);
+      numeroLimpio = partes[partes.length - 1]; // quedarse solo con la última parte
+    }
+
+    const mov = { id: ++nextId, tipo: d.tipo || "fc", monto: parseFloat(d.monto) || 0, numero: numeroLimpio, descripcion: d.descripcion || "", fecha: fechaStr };
 
     // Validar duplicado
     const movsProv = movimientos[provId] || [];
@@ -1859,7 +1867,7 @@ REGLAS IMPORTANTES:
     }
 
     try {
-      const apiKey = sessionStorage.getItem("cp_apikey") || "";
+      const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCocYmtRP3VnkfIpYnUvL-geAId0a-l46I";
       if (!apiKey) {
         document.getElementById("foto-fc-error").textContent = "⚙️ Necesitás configurar tu API Key de Google Gemini. Tocá el ícono ⚙️ en el header.";
         document.getElementById("foto-fc-error").style.display = "block";
