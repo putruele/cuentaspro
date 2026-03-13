@@ -1666,12 +1666,17 @@
       const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file);
     });
 
-    const prompt = `Esta es una factura o comprobante. Extraé los datos y respondé SOLO con un JSON válido sin markdown:
-{"proveedor":"Nombre del proveedor o empresa emisora","tipo":"fc","numero":"0001-00012345","fecha":"2026-03-12","monto":15000.00,"descripcion":"descripción breve"}
-Para tipo: "fc"=Factura, "nd"=Nota de Débito, "nc"=Nota de Crédito, "ret"=Retención.
-Fecha en YYYY-MM-DD. Monto como número sin símbolos (total final a pagar).
-El campo "proveedor" es el nombre de quien EMITE el comprobante (el vendedor, no el comprador).
-Si no podés leer algún dato ponelo vacío o 0.`;
+    const prompt = `Esta es una factura o comprobante comercial argentino. Extraé los datos y respondé SOLO con un JSON válido sin markdown, sin explicaciones:
+{"proveedor":"Nombre del proveedor","tipo":"fc","numero":"0001-00012345","fecha":"2026-03-12","monto":15000.00,"descripcion":"descripción breve"}
+
+REGLAS IMPORTANTES:
+- "proveedor" = quien VENDE y EMITE la factura. En una factura aparece primero arriba (encabezado con CUIT, dirección, razón social del emisor). NO es quien la recibe ni el comprador.
+- En facturas argentinas: el emisor está en el encabezado SUPERIOR. El receptor/comprador aparece DEBAJO de una línea separadora o después de "A:".
+- Si ves dos empresas, tomá la que aparece en el ENCABEZADO SUPERIOR como emisor (tiene CUIT, domicilio fiscal, condición IVA del vendedor).
+- tipo: "fc"=Factura A/B/C, "nd"=Nota de Débito, "nc"=Nota de Crédito, "ret"=Retención
+- fecha en YYYY-MM-DD
+- monto: el TOTAL final del comprobante, como número sin símbolos
+- Si no podés leer algún dato ponelo vacío o 0`;
 
     const parte = { inline_data: { mime_type: esPDF ? "application/pdf" : (file.type || "image/jpeg"), data: base64 } };
     const modelos = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-lite"];
