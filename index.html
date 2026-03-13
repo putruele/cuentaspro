@@ -191,9 +191,9 @@
     .movimiento-row.fc-linked { background: rgba(251,191,36,.08) !important; border-color: rgba(251,191,36,.5) !important; box-shadow: 0 0 0 2px rgba(251,191,36,.15); transform: translateX(3px); }
     .movimiento-row.pago-hover { background: rgba(99,102,241,.12) !important; border-color: rgba(99,102,241,.5) !important; }
     #lista-movimientos .movimiento-row { max-width: 860px; }
-    .mov-info { flex: 1; min-width: 0; max-width: 420px; }
-    .mov-tipo { font-weight: 600; font-size: .82rem; display: flex; align-items: center; gap: 6px; }
-    .mov-fecha { color: var(--muted); font-size: .72rem; margin-top: 1px; }
+    .mov-info { flex: 1; min-width: 0; max-width: 380px; overflow: hidden; }
+    .mov-tipo { font-weight: 600; font-size: .82rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mov-fecha { color: var(--muted); font-size: .72rem; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mov-monto { font-family: "Syne", sans-serif; font-weight: 700; font-size: .95rem; flex-shrink: 0; }
     .mov-monto.fc   { color: #fca5a5; }
     .mov-monto.pago { color: #86efac; }
@@ -866,11 +866,13 @@
     if (!numero) return numero;
     const partes = String(numero).split("-");
     if (partes.length === 2) {
-      const puntoVenta = parseInt(partes[0], 10); // quita ceros: "0001" → 1
-      const nro = parseInt(partes[1], 10);         // quita ceros: "00004521" → 4521
+      const puntoVenta = parseInt(partes[0], 10);
+      const nro = parseInt(partes[1], 10);
       return `${puntoVenta}-${nro}`;
     }
-    return numero;
+    // Sin guión — quitar ceros a la izquierda
+    const nro = parseInt(numero, 10);
+    return isNaN(nro) ? numero : String(nro);
   }
   function showView(id) { document.querySelectorAll(".view").forEach(v => v.classList.remove("active")); document.getElementById(id).classList.add("active"); }
   function showToast(msg, type = "ok") {
@@ -1656,7 +1658,7 @@
     const file = input.files[0];
     input.value = "";
 
-    const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCrecwA04mPSPqNi1IOk8cNZYieu8kt5k4";
+    const apiKey = sessionStorage.getItem("cp_apikey") || "";
     if (!apiKey) return showToast("⚙️ Configurá tu API Key de Gemini primero", "error");
 
     showToast("⏳ Analizando comprobante...", "ok");
@@ -1869,7 +1871,7 @@ REGLAS IMPORTANTES:
     }
 
     try {
-      const apiKey = sessionStorage.getItem("cp_apikey") || "AIzaSyCrecwA04mPSPqNi1IOk8cNZYieu8kt5k4";
+      const apiKey = sessionStorage.getItem("cp_apikey") || "";
       if (!apiKey) {
         document.getElementById("foto-fc-error").textContent = "⚙️ Necesitás configurar tu API Key de Google Gemini. Tocá el ícono ⚙️ en el header.";
         document.getElementById("foto-fc-error").style.display = "block";
