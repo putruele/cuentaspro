@@ -1706,13 +1706,17 @@ Si no podés leer algún dato ponelo vacío o 0.`;
       return;
     }
 
-    // Buscar coincidencia exacta o parcial
-    const nombreLower = nombreDetectado.toLowerCase();
-    const exacto = proveedores.find(p => p.nombre.toLowerCase() === nombreLower);
-    const parcial = proveedores.find(p =>
-      p.nombre.toLowerCase().includes(nombreLower) ||
-      nombreLower.includes(p.nombre.toLowerCase())
-    );
+    // Buscar coincidencia — ignora SRL, SA, S.A., SAS, etc.
+    const limpiarNombre = n => n.toLowerCase()
+      .replace(/\b(s\.?r\.?l\.?|s\.?a\.?s?\.?|s\.?a\.?|ltda?\.?|e\.?i\.?r\.?l\.?|soc\.?\s*anon\.?|sociedad\s*anonima|agricola|industrial|comercial|induistrial)\b/g, "")
+      .replace(/\s+/g, " ").trim();
+
+    const nombreLower = limpiarNombre(nombreDetectado);
+    const exacto = proveedores.find(p => limpiarNombre(p.nombre) === nombreLower);
+    const parcial = proveedores.find(p => {
+      const pn = limpiarNombre(p.nombre);
+      return pn.includes(nombreLower) || nombreLower.includes(pn);
+    });
     const encontrado = exacto || parcial;
 
     if (encontrado) {
