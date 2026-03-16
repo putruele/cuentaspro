@@ -240,6 +240,9 @@
     .movimiento-row:hover { background: var(--surface2); }
     .movimiento-row.fc-linked { background: rgba(251,191,36,.08) !important; border-color: rgba(251,191,36,.5) !important; box-shadow: 0 0 0 2px rgba(251,191,36,.15); transform: translateX(3px); }
     .movimiento-row.pago-hover { background: rgba(99,102,241,.12) !important; border-color: rgba(99,102,241,.5) !important; }
+    tr.fc-linked td { background: rgba(251,191,36,.12) !important; }
+    tr.fc-linked { outline: 2px solid rgba(251,191,36,.5); }
+    tr.pago-hover td { background: rgba(99,102,241,.12) !important; }
     #lista-movimientos .movimiento-row { max-width: 860px; }
     .mov-info { flex: 1; min-width: 0; max-width: 380px; overflow: hidden; }
     .mov-tipo { font-weight: 600; font-size: .82rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1164,7 +1167,7 @@
       const selBg = movsSeleccionados.has(m.id) ? "rgba(251,191,36,.15)" : rowBg;
       const selOutline = movsSeleccionados.has(m.id) ? "2px solid rgba(251,191,36,.6)" : "";
 
-      return `<tr id="mov-row-${m.id}" onclick="clickFila(event,${m.id})" style="background:${selBg};outline:${selOutline};cursor:pointer;transition:background .1s">
+      return `<tr id="mov-row-${m.id}" data-estado="${estado}" onclick="clickFila(event,${m.id})" style="background:${selBg};outline:${selOutline};cursor:pointer;transition:background .1s">
         <td style="padding:3px 6px;text-align:center;width:24px;border:1px solid var(--border)" onclick="event.stopPropagation()">${checkIzq}</td>
         <td style="padding:3px 6px;width:52px;text-align:center;border:1px solid var(--border)">
           <div style="font-size:.65rem;color:var(--muted);line-height:1.2">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
@@ -1204,35 +1207,41 @@
   }
 
   function clickFila(e, id) {
-    // Ctrl+clic o clic normal — toggle selección
+    const movs = movimientos[selectedId] || [];
+    const m = movs.find(x => x.id === id);
+    const esPago = m?.tipo === "pago";
+    const fcIds = esPago ? (getEstados()["pago_fcs_" + id] || []) : [];
+
     if (!e.ctrlKey && !e.metaKey) {
-      // Sin Ctrl: si solo está esta, deseleccionar; sino seleccionar solo esta
       if (movsSeleccionados.size === 1 && movsSeleccionados.has(id)) {
         movsSeleccionados.clear();
+        if (fcIds.length) limpiarResaltado();
       } else {
         movsSeleccionados.clear();
+        limpiarResaltado();
         movsSeleccionados.add(id);
+        if (fcIds.length) resaltarFCsVinculadas(id, fcIds);
       }
     } else {
-      // Con Ctrl: agregar/quitar de la selección
       if (movsSeleccionados.has(id)) {
         movsSeleccionados.delete(id);
+        if (fcIds.length) limpiarResaltado();
       } else {
         movsSeleccionados.add(id);
+        if (fcIds.length) resaltarFCsVinculadas(id, fcIds);
       }
     }
     actualizarBarra();
-    // Actualizar visual de filas sin re-renderizar todo
+    // Actualizar visual de filas
     document.querySelectorAll("#lista-movimientos tr[id^='mov-row-']").forEach(tr => {
       const tid = Number(tr.id.replace("mov-row-", ""));
       const sel = movsSeleccionados.has(tid);
-      // Preservar color de fondo según estado
-      const esAprobada = tr.style.background.includes("59,130,246");
-      const esPagada = tr.style.background.includes("34,197,94");
       if (sel) {
         tr.style.background = "rgba(251,191,36,.15)";
         tr.style.outline = "2px solid rgba(251,191,36,.6)";
-      } else {
+      } else if (!tr.classList.contains("fc-linked")) {
+        const esAprobada = tr.getAttribute("data-estado") === "aprobada";
+        const esPagada = tr.getAttribute("data-estado") === "pagada";
         tr.style.background = esAprobada ? "rgba(59,130,246,.08)" : esPagada ? "rgba(34,197,94,.06)" : "";
         tr.style.outline = "";
       }
@@ -1446,17 +1455,15 @@
     const rows = selOrden.map(m => {
       const cfg = TIPOS[m.tipo] || TIPOS.fc;
       const saldo = saldoMap[m.id] ?? 0;
-      const saldoSigno = saldo > 0 ? "D " : saldo < 0 ? "A " : "";
-      const saldoStr = saldoSigno + fmt(Math.abs(saldo));
-      const saldoColor = saldo > 0 ? "#b45309" : saldo < 0 ? "#166534" : "#666";
-      const montoStr = (cfg.efecto === -1 ? "-" : "+") + fmt(m.monto);
-      const montoColor = cfg.efecto === 1 ? "#b45309" : "#166534";
+      const saldoColor = saldo > 0 ? "#b45309" : saldo < 0 ? "#166534" : "#555";
+      const esDebe = cfg.efecto === 1;
       return `<tr>
-        <td>${m.fecha}</td>
-        <td>${cfg.label}${m.numero ? " N°" + fmtNumFC(m.numero) : ""}</td>
-        <td>${m.descripcion || "-"}</td>
-        <td style="text-align:right;font-weight:600;color:${montoColor}">${montoStr}</td>
-        <td style="text-align:right;font-weight:700;color:${saldoColor}">${saldoStr}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;text-align:center;white-space:nowrap">${m.fecha || "-"}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;white-space:nowrap">${cfg.label}${m.numero ? " N°" + fmtNumFC(m.numero) : ""}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;color:#555">${m.descripcion || "-"}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;text-align:right;font-weight:600;color:#b45309">${esDebe ? fmt(m.monto) : ""}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;text-align:right;font-weight:600;color:#166534">${!esDebe ? fmt(m.monto) : ""}</td>
+        <td style="border:1px solid #e2e8f0;padding:4px 8px;text-align:right;font-weight:700;color:${saldoColor}">${fmt(Math.abs(saldo))}</td>
       </tr>`;
     }).join("");
 
@@ -1472,8 +1479,17 @@
           <strong>${fecha}</strong>
         </div>
       </div>
-      <table class="print-table">
-        <thead><tr><th>Fecha</th><th>Comprobante</th><th>Descripción</th><th style="text-align:right">Monto</th><th style="text-align:right">Saldo c/c</th></tr></thead>
+      <table class="print-table" style="border:1px solid #e2e8f0">
+        <thead>
+          <tr style="background:#f1f5f9">
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:center;font-size:.75rem;color:#555;text-transform:uppercase">Fecha</th>
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:left;font-size:.75rem;color:#555;text-transform:uppercase">Comprobante</th>
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:left;font-size:.75rem;color:#555;text-transform:uppercase">Descripción</th>
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:right;font-size:.75rem;color:#b45309;text-transform:uppercase">Debe</th>
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:right;font-size:.75rem;color:#166534;text-transform:uppercase">Haber</th>
+            <th style="border:1px solid #e2e8f0;padding:5px 8px;text-align:right;font-size:.75rem;color:#555;text-transform:uppercase">Saldo</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="print-footer">
