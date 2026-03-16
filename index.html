@@ -304,14 +304,26 @@
     @media print {
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
-      #print-area { position: fixed; inset: 0; padding: 32px; background: white; color: black; font-family: sans-serif; }
-      .print-header { margin-bottom: 24px; border-bottom: 2px solid #000; padding-bottom: 12px; }
-      .print-title { font-size: 1.4rem; font-weight: 800; }
-      .print-sub { font-size: .85rem; color: #555; margin-top: 4px; }
-      .print-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-      .print-table th { text-align: left; border-bottom: 1px solid #ccc; padding: 6px 8px; font-size: .82rem; color: #555; }
-      .print-table td { padding: 8px; border-bottom: 1px solid #eee; font-size: .9rem; }
-      .print-total { margin-top: 20px; text-align: right; font-size: 1.1rem; font-weight: 700; }
+      #print-area { position: fixed; inset: 0; padding: 24px 32px; background: white; color: black; font-family: Arial, sans-serif; }
+      .print-header { margin-bottom: 16px; border-bottom: 3px solid #000; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+      .print-title { font-size: 1rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .05em; }
+      .print-prov { font-size: 1.6rem; font-weight: 900; color: #000; margin-top: 2px; }
+      .print-cuit { font-size: .8rem; color: #666; margin-top: 2px; }
+      .print-fecha { font-size: .8rem; color: #666; text-align: right; }
+      .print-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .82rem; }
+      .print-table th { background: #f1f5f9; color: #1e293b; text-align: left; padding: 6px 10px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #1e293b; }
+      .print-table th:last-child, .print-table th:nth-last-child(2) { text-align: right; }
+      .print-table td { padding: 5px 10px; border-bottom: 1px solid #e2e8f0; font-size: .82rem; }
+      .print-table td:last-child, .print-table td:nth-last-child(2) { text-align: right; font-weight: 600; }
+      .print-table tr:nth-child(even) td { background: #f8fafc; }
+      .print-footer { margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-start; border-top: 2px solid #000; padding-top: 10px; }
+      .print-totales { display: flex; gap: 32px; }
+      .print-total-item { font-size: .88rem; }
+      .print-total-label { color: #555; font-size: .75rem; text-transform: uppercase; }
+      .print-total-val { font-size: 1.05rem; font-weight: 800; margin-top: 2px; }
+      .print-saldo-box { border: 2px solid #000; padding: 8px 16px; text-align: right; }
+      .print-saldo-label { font-size: .75rem; color: #555; text-transform: uppercase; }
+      .print-saldo-val { font-size: 1.2rem; font-weight: 900; margin-top: 2px; }
     }
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(4px); z-index: 100; align-items: flex-end; justify-content: center; }
@@ -1188,9 +1200,12 @@
           <div style="font-size:.75rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
         </div>
         <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
-          <input type="checkbox" title="Seleccionar para imprimir" ${movsSeleccionados.has(m.id) ? "checked" : ""}
-            onclick="toggleSeleccionado(event,${m.id})"
-            style="accent-color:#f59e0b;cursor:pointer;width:15px;height:15px;flex-shrink:0" />
+          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+            <span style="font-size:.7rem;color:var(--muted)">🖨️</span>
+            <input type="checkbox" title="Seleccionar para imprimir" ${movsSeleccionados.has(m.id) ? "checked" : ""}
+              onclick="toggleSeleccionado(event,${m.id})"
+              style="accent-color:#f59e0b;cursor:pointer;width:15px;height:15px;flex-shrink:0" />
+          </div>
           ${(estado !== "pagada" || m.tipo === "pago") ? `<button class="mov-delete" title="Editar" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3)">✏️</button>` : ""}
           <button class="mov-delete" title="Eliminar" onclick="deleteMov(${m.id})">×</button>
         </div>
@@ -1412,23 +1427,37 @@
 
     document.getElementById("print-area").innerHTML = `
       <div class="print-header">
-        <div class="print-title">Resumen de movimientos seleccionados</div>
-        <div class="print-sub">Proveedor: <strong>${prov.nombre}</strong>${prov.cuit ? " — CUIT: " + prov.cuit : ""}</div>
-        <div class="print-sub">Fecha: ${fecha}</div>
+        <div>
+          <div class="print-title">Resumen de cuenta corriente</div>
+          <div class="print-prov">${prov.nombre}</div>
+          ${prov.cuit ? `<div class="print-cuit">CUIT: ${prov.cuit}</div>` : ""}
+        </div>
+        <div class="print-fecha">
+          <div>Fecha de emisión</div>
+          <strong>${fecha}</strong>
+        </div>
       </div>
       <table class="print-table">
         <thead><tr><th>Fecha</th><th>Comprobante</th><th>Descripción</th><th style="text-align:right">Monto</th><th style="text-align:right">Saldo c/c</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div style="margin-top:12px;display:flex;gap:24px">
-        ${totalCargos > 0 ? `<div class="print-total" style="color:#b45309">Total cargos: ${fmt(totalCargos)}</div>` : ""}
-        ${totalAbonos > 0 ? `<div class="print-total" style="color:#166534">Total abonos: ${fmt(totalAbonos)}</div>` : ""}
-      </div>
-      <div style="margin-top:16px;padding:12px 16px;border:2px solid #b45309;border-radius:8px;display:inline-block">
-        <span style="font-size:.85rem;color:#555">Saldo total cuenta corriente: </span>
-        <strong style="font-size:1.1rem;color:${prov.saldo > 0 ? "#b45309" : prov.saldo < 0 ? "#166534" : "#555"}">
-          ${prov.saldo > 0 ? "Deuda " : prov.saldo < 0 ? "A favor " : ""}${fmt(Math.abs(prov.saldo))}
-        </strong>
+      <div class="print-footer">
+        <div class="print-totales">
+          ${totalCargos > 0 ? `<div class="print-total-item">
+            <div class="print-total-label">Aprobado a pagar</div>
+            <div class="print-total-val" style="color:#b45309">${fmt(totalCargos)}</div>
+          </div>` : ""}
+          ${totalAbonos > 0 ? `<div class="print-total-item">
+            <div class="print-total-label">Total abonos</div>
+            <div class="print-total-val" style="color:#166534">${fmt(totalAbonos)}</div>
+          </div>` : ""}
+        </div>
+        <div class="print-saldo-box">
+          <div class="print-saldo-label">Saldo cuenta corriente</div>
+          <div class="print-saldo-val" style="color:${prov.saldo > 0 ? "#b45309" : prov.saldo < 0 ? "#166534" : "#000"}">
+            ${prov.saldo > 0 ? "Deuda " : prov.saldo < 0 ? "A favor " : ""}${fmt(Math.abs(prov.saldo))}
+          </div>
+        </div>
       </div>`;
 
     document.getElementById("print-area").style.display = "block";
