@@ -1175,9 +1175,9 @@
         </td>
         <td style="padding:3px 8px;font-size:.7rem;border:1px solid var(--border)">${cfg.icon} ${cfg.label}${m.numero ? " N°"+fmtNumFC(m.numero) : ""} ${badge}</td>
         <td style="padding:3px 8px;font-size:.68rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--border)">${m.descripcion || ""}${vinculoTxt}</td>
-        <td style="padding:3px 8px;text-align:right;width:95px;font-size:.75rem;font-weight:600;color:var(--yellow);border:1px solid var(--border)">${esDebe ? fmt(m.monto) : ""}</td>
-        <td style="padding:3px 8px;text-align:right;width:95px;font-size:.75rem;font-weight:600;color:var(--green);border:1px solid var(--border)">${!esDebe ? fmt(m.monto) : ""}</td>
-        <td style="padding:3px 8px;text-align:right;width:95px;font-size:.75rem;font-weight:700;color:${saldoColor};border:1px solid var(--border)">${fmt(Math.abs(saldoFila))}</td>
+        <td style="padding:3px 8px;text-align:right;width:124px;font-size:.75rem;font-weight:600;color:var(--yellow);border:1px solid var(--border)">${esDebe ? fmt(m.monto) : ""}</td>
+        <td style="padding:3px 8px;text-align:right;width:124px;font-size:.75rem;font-weight:600;color:var(--green);border:1px solid var(--border)">${!esDebe ? fmt(m.monto) : ""}</td>
+        <td style="padding:3px 8px;text-align:right;width:124px;font-size:.75rem;font-weight:700;color:${saldoColor};border:1px solid var(--border)">${fmt(Math.abs(saldoFila))}</td>
         <td style="padding:3px 4px;width:80px;text-align:right;border:1px solid var(--border)" onclick="event.stopPropagation()">
           <div style="display:inline-flex;align-items:center;gap:2px">
             ${(estado !== "pagada" || esPago) ? `<button class="mov-delete" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3);padding:2px 4px;font-size:.65rem">✏️</button>` : ""}
@@ -1187,16 +1187,16 @@
       </tr>`;
     }).join("");
 
-    lista.innerHTML = `<div style="padding:8px 12px"><table style="width:100%;max-width:900px;margin:0 auto;border-collapse:collapse;font-family:inherit;border:1px solid var(--border)">
+    lista.innerHTML = `<div style="padding:8px 12px"><table style="width:100%;max-width:1170px;margin:0 auto;border-collapse:collapse;font-family:inherit;border:1px solid var(--border)">
       <thead style="position:sticky;top:0;z-index:2">
         <tr style="background:var(--surface2)">
           <th style="padding:5px 6px;width:24px;border:1px solid var(--border)"></th>
           <th style="padding:5px 6px;width:52px;font-size:.62rem;color:var(--muted);font-weight:600;text-align:center;border:1px solid var(--border)">FECHA</th>
           <th style="padding:5px 8px;font-size:.62rem;color:var(--muted);font-weight:600;text-align:left;border:1px solid var(--border)">COMPROBANTE</th>
           <th style="padding:5px 8px;font-size:.62rem;color:var(--muted);font-weight:600;text-align:left;border:1px solid var(--border)">DESCRIPCIÓN</th>
-          <th style="padding:5px 8px;width:95px;font-size:.62rem;color:var(--yellow);font-weight:600;text-align:right;border:1px solid var(--border)">DEBE</th>
-          <th style="padding:5px 8px;width:95px;font-size:.62rem;color:var(--green);font-weight:600;text-align:right;border:1px solid var(--border)">HABER</th>
-          <th style="padding:5px 8px;width:95px;font-size:.62rem;color:var(--muted);font-weight:600;text-align:right;border:1px solid var(--border)">SALDO</th>
+          <th style="padding:5px 8px;width:124px;font-size:.62rem;color:var(--yellow);font-weight:600;text-align:right;border:1px solid var(--border)">DEBE</th>
+          <th style="padding:5px 8px;width:124px;font-size:.62rem;color:var(--green);font-weight:600;text-align:right;border:1px solid var(--border)">HABER</th>
+          <th style="padding:5px 8px;width:124px;font-size:.62rem;color:var(--muted);font-weight:600;text-align:right;border:1px solid var(--border)">SALDO</th>
           <th style="padding:5px 4px;width:80px;border:1px solid var(--border)"></th>
         </tr>
       </thead>
