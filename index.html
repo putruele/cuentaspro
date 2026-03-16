@@ -1000,6 +1000,7 @@
     selectedId = id;
     filtroPendientes = false;
     facturasAprobadas.clear();
+    movsSeleccionados.clear();
     const p = proveedores.find(x => x.id === id);
     document.getElementById("det-nombre").textContent = p.nombre;
     document.getElementById("det-cuit").textContent = p.cuit || "Sin CUIT";
@@ -1020,7 +1021,8 @@
 
   function volverLista() { showView("view-proveedores"); renderProveedores(); }
 
-  let facturasAprobadas = new Set();
+  let facturasAprobadas = new Set();  // FC aprobadas para pago
+  let movsSeleccionados = new Set();  // Cualquier movimiento seleccionado para imprimir
 
   // Estado persistente — usa Firebase si está disponible, sino sessionStorage
   function getEstados() {
@@ -1157,7 +1159,7 @@
       if (puedeAprobar && estado !== "pagada") {
         checkIzq = `<input type="checkbox" class="mov-check" ${checked} ${disabled} onclick="toggleAprobada(event,${m.id})" />`;
       } else if (puedeSeleccionar) {
-        const seleccionado = facturasAprobadas.has(m.id) ? "checked" : "";
+        const seleccionado = movsSeleccionados.has(m.id) ? "checked" : "";
         checkIzq = `<input type="checkbox" class="mov-check" ${seleccionado} onclick="toggleSeleccionado(event,${m.id})" style="accent-color:var(--accent2)" />`;
       } else if (esPago && fcIdsVinculadas.length) {
         checkIzq = `<input type="checkbox" class="mov-check pago-link-check" title="Ver FC contempladas"
@@ -1186,6 +1188,9 @@
           <div style="font-size:.75rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
         </div>
         <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
+          <input type="checkbox" title="Seleccionar para imprimir" ${movsSeleccionados.has(m.id) ? "checked" : ""}
+            onclick="toggleSeleccionado(event,${m.id})"
+            style="accent-color:#f59e0b;cursor:pointer;width:15px;height:15px;flex-shrink:0" />
           ${(estado !== "pagada" || m.tipo === "pago") ? `<button class="mov-delete" title="Editar" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3)">✏️</button>` : ""}
           <button class="mov-delete" title="Eliminar" onclick="deleteMov(${m.id})">×</button>
         </div>
@@ -1197,10 +1202,10 @@
 
   function toggleSeleccionado(e, id) {
     e.stopPropagation();
-    if (facturasAprobadas.has(id)) {
-      facturasAprobadas.delete(id);
+    if (movsSeleccionados.has(id)) {
+      movsSeleccionados.delete(id);
     } else {
-      facturasAprobadas.add(id);
+      movsSeleccionados.add(id);
     }
     actualizarBarra();
   }
@@ -1217,29 +1222,47 @@
     }
     renderMovimientos();
   }
+    e.stopPropagation();
+    const actual = getEstadoFactura(id);
+    if (actual === "aprobada") {
+      setEstadoFactura(id, "normal");
+      facturasAprobadas.delete(id);
+    } else {
+      setEstadoFactura(id, "aprobada");
+      facturasAprobadas.add(id);
+    }
+    renderMovimientos();
+  }
 
   function actualizarBarra() {
     const barra = document.getElementById("barra-aprobado");
     const lista = document.getElementById("lista-movimientos");
     const movs  = movimientos[selectedId] || [];
-    const aprobadas = movs.filter(m => m.tipo === "fc" && getEstadoFactura(m.id) === "aprobada");
-    const total = aprobadas.reduce((s, m) => s + m.monto, 0);
-    const count = aprobadas.length;
-    if (count === 0) {
+    const aprobadas = movs.filter(m => (m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada");
+    const totalAprobadas = aprobadas.reduce((s, m) => s + m.monto, 0);
+    const countAprobadas = aprobadas.length;
+    const countSeleccionados = movsSeleccionados.size;
+    const hayAlgo = countAprobadas > 0 || countSeleccionados > 0;
+
+    if (!hayAlgo) {
       barra.classList.remove("visible");
       if (lista) lista.style.paddingBottom = "20px";
       return;
     }
     barra.classList.add("visible");
     if (lista) lista.style.paddingBottom = "160px";
-    document.getElementById("barra-monto").textContent = fmt(total);
-    document.getElementById("barra-count").textContent = `${count} factura${count !== 1 ? "s" : ""} aprobada${count !== 1 ? "s" : ""}`;
+    document.getElementById("barra-monto").textContent = fmt(totalAprobadas);
+    let label = "";
+    if (countAprobadas > 0) label += `${countAprobadas} FC aprobada${countAprobadas !== 1 ? "s" : ""}`;
+    if (countSeleccionados > 0) label += `${label ? " · " : ""}${countSeleccionados} seleccionado${countSeleccionados !== 1 ? "s" : ""} para imprimir`;
+    document.getElementById("barra-count").textContent = label;
   }
 
   function limpiarChecks() {
     const movs = movimientos[selectedId] || [];
-    movs.forEach(m => { if (m.tipo === "fc" && getEstadoFactura(m.id) === "aprobada") setEstadoFactura(m.id, "normal"); });
+    movs.forEach(m => { if ((m.tipo === "fc" || m.tipo === "nd") && getEstadoFactura(m.id) === "aprobada") setEstadoFactura(m.id, "normal"); });
     facturasAprobadas.clear();
+    movsSeleccionados.clear();
     renderMovimientos();
   }
 
@@ -1355,8 +1378,9 @@
   function imprimirAprobado() {
     const prov = proveedores.find(p => p.id === selectedId);
     const movs = movimientos[selectedId] || [];
-    // Incluir todos los movimientos seleccionados (FC, ND, NC, ret, envases, pago)
-    const seleccionadas = movs.filter(m => facturasAprobadas.has(m.id));
+    // Incluir FC aprobadas + movimientos seleccionados manualmente (sin duplicados)
+    const idsSeleccionados = new Set([...facturasAprobadas, ...movsSeleccionados]);
+    const seleccionadas = movs.filter(m => idsSeleccionados.has(m.id));
     const totalCargos  = seleccionadas.filter(m => (TIPOS[m.tipo]?.efecto || 1) === 1).reduce((s, m) => s + m.monto, 0);
     const totalAbonos  = seleccionadas.filter(m => (TIPOS[m.tipo]?.efecto || 1) === -1).reduce((s, m) => s + m.monto, 0);
     const fecha = new Date().toLocaleDateString("es-AR");
