@@ -1222,17 +1222,6 @@
     }
     renderMovimientos();
   }
-    e.stopPropagation();
-    const actual = getEstadoFactura(id);
-    if (actual === "aprobada") {
-      setEstadoFactura(id, "normal");
-      facturasAprobadas.delete(id);
-    } else {
-      setEstadoFactura(id, "aprobada");
-      facturasAprobadas.add(id);
-    }
-    renderMovimientos();
-  }
 
   function actualizarBarra() {
     const barra = document.getElementById("barra-aprobado");
