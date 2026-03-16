@@ -305,6 +305,8 @@
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
       #print-area { position: fixed; inset: 0; padding: 24px 32px; background: white; color: black; font-family: Arial, sans-serif; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      @page { margin: 0; size: A4; }
       .print-header { margin-bottom: 16px; border-bottom: 3px solid #000; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
       .print-title { font-size: 1rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .05em; }
       .print-prov { font-size: 1.6rem; font-weight: 900; color: #000; margin-top: 2px; }
@@ -1385,8 +1387,10 @@
     // Incluir FC aprobadas + movimientos seleccionados manualmente (sin duplicados)
     const idsSeleccionados = new Set([...facturasAprobadas, ...movsSeleccionados]);
     const seleccionadas = movs.filter(m => idsSeleccionados.has(m.id));
-    const totalCargos  = seleccionadas.filter(m => (TIPOS[m.tipo]?.efecto || 1) === 1).reduce((s, m) => s + m.monto, 0);
-    const totalAbonos  = seleccionadas.filter(m => (TIPOS[m.tipo]?.efecto || 1) === -1).reduce((s, m) => s + m.monto, 0);
+    const totalCargos = [...facturasAprobadas].reduce((s, id) => {
+      const m = movs.find(x => x.id === id);
+      return m ? s + m.monto : s;
+    }, 0);
     const fecha = new Date().toLocaleDateString("es-AR");
 
     // Calcular saldo acumulado cronológico
@@ -1446,10 +1450,6 @@
           ${totalCargos > 0 ? `<div class="print-total-item">
             <div class="print-total-label">Aprobado a pagar</div>
             <div class="print-total-val" style="color:#b45309">${fmt(totalCargos)}</div>
-          </div>` : ""}
-          ${totalAbonos > 0 ? `<div class="print-total-item">
-            <div class="print-total-label">Total abonos</div>
-            <div class="print-total-val" style="color:#166534">${fmt(totalAbonos)}</div>
           </div>` : ""}
         </div>
         <div class="print-saldo-box">
