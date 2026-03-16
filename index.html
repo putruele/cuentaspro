@@ -1103,116 +1103,103 @@
       saldoMap[m.id] = saldoAcum;
     });
 
-    // Mostrar en orden inverso (más reciente primero)
-    const movs = movsOrig.slice(); // más viejo primero (orden original de carga)
+    // Mostrar en orden cronológico
+    const movs = movsOrig.slice();
 
-    lista.innerHTML = movs.map(m => {
-      const cfg    = TIPOS[m.tipo] || TIPOS.fc;
+    const q = (document.getElementById("input-buscar-mov")?.value || "").toLowerCase().trim();
+
+    const filas = movs.map(m => {
+      const cfg = TIPOS[m.tipo] || TIPOS.fc;
       const puedeAprobar = (m.tipo === "fc" || m.tipo === "nd");
-      const puedeSeleccionar = !puedeAprobar && m.tipo !== "pago"; // nc, ret, envases, pago
       const estado = puedeAprobar ? getEstadoFactura(m.id) : "normal";
 
-      // Filtro de búsqueda local
-      const q = (document.getElementById("input-buscar-mov")?.value || "").toLowerCase().trim();
       if (q) {
         const haystack = [m.numero, m.descripcion, cfg.label].filter(Boolean).join(" ").toLowerCase();
         if (!haystack.includes(q)) return "";
       }
-
-      // Filtro solo pendientes (facturas no pagadas)
       if (filtroPendientes && m.tipo === "fc" && estado === "pagada") return "";
       if (filtroPendientes && m.tipo !== "fc") return "";
-      const rowCls = estado === "aprobada" ? "aprobada" : estado === "pagada" ? "pagada" : "";
+
       const checked = estado === "aprobada" ? "checked" : "";
       const disabled = estado === "pagada" ? "disabled" : "";
-      const clsMonto = cfg.efecto === 1 ? "monto-deuda" : "monto-favor";
-      const signo = cfg.efecto === 1 ? "+" : "-";
-
-      let badge = "";
-      if (estado === "aprobada") badge = `<span class="badge-aprobada">✅ Aprobada</span>`;
-      if (estado === "pagada")   badge = `<span class="badge-pagada">💳 Pagada</span>`;
-
-      // Vínculo: FC → OP que la pagó
-      let vinculo = "";
-      if (estado === "pagada") {
-        const op = getEstados()["fc_op_" + m.id];
-        if (op) {
-          const partes = [op.numero ? "OP N°" + op.numero : "OP", op.medio, op.fecha].filter(Boolean);
-          vinculo = `<div class="vinculo-box">Cancelada con: <strong>${partes.join(" — ")}</strong></div>`;
-        }
-      }
-
-      // Vínculo: Pago → FCs que contempló
-      let vinculoPago = "";
-      if (m.tipo === "pago") {
-        const fcIds = getEstados()["pago_fcs_" + m.id];
-        if (fcIds && fcIds.length) {
-          const movsProv = movimientos[selectedId] || [];
-          const labels = fcIds.map(fid => {
-            const fc = movsProv.find(x => Number(x.id) === Number(fid));
-            if (!fc) return "FC";
-            if (fc.numero) return "FC N°" + fmtNumFC(fc.numero);
-            if (fc.descripcion) return "FC — " + fc.descripcion;
-            return "Factura";
-          });
-          vinculoPago = `<div class="vinculo-box">Contempla: <strong>${labels.join(", ")}</strong></div>`;
-        }
-      }
-
-      // Saldo acumulado después de este movimiento
-      const saldoFila = saldoMap[m.id] ?? 0;
-      const saldoColor = saldoFila > 0 ? "var(--yellow)" : saldoFila < 0 ? "var(--green)" : "var(--muted)";
-      const saldoSigno = saldoFila > 0 ? "D " : saldoFila < 0 ? "A " : "";
-      const saldoTexto = saldoSigno + fmt(Math.abs(saldoFila));
-
+      const esDebe = cfg.efecto === 1;
       const esPago = m.tipo === "pago";
       const fcIdsVinculadas = esPago ? (getEstados()["pago_fcs_" + m.id] || []) : [];
+      const saldoFila = saldoMap[m.id] ?? 0;
+      const saldoColor = saldoFila > 0 ? "var(--yellow)" : saldoFila < 0 ? "var(--green)" : "var(--muted)";
 
-      // Check izquierdo: aprobación para FC/ND, selección para resto, resaltado para pagos con FC vinculadas
+      // Check izquierdo
       let checkIzq;
       if (puedeAprobar && estado !== "pagada") {
         checkIzq = `<input type="checkbox" class="mov-check" ${checked} ${disabled} onclick="toggleAprobada(event,${m.id})" />`;
-      } else if (puedeSeleccionar) {
-        const seleccionado = movsSeleccionados.has(m.id) ? "checked" : "";
-        checkIzq = `<input type="checkbox" class="mov-check" ${seleccionado} onclick="toggleSeleccionado(event,${m.id})" style="accent-color:var(--accent2)" />`;
       } else if (esPago && fcIdsVinculadas.length) {
-        checkIzq = `<input type="checkbox" class="mov-check pago-link-check" title="Ver FC contempladas"
+        checkIzq = `<input type="checkbox" class="mov-check pago-link-check"
             onchange="toggleResaltadoPago(this,${m.id},[${fcIdsVinculadas.join(",")}])"
             style="accent-color:var(--accent);cursor:pointer" />`;
       } else {
-        checkIzq = `<div style="width:20px;flex-shrink:0"></div>`;
+        checkIzq = `<div style="width:16px"></div>`;
       }
 
-      return `<div class="movimiento-row ${rowCls}" id="mov-row-${m.id}">
-        ${checkIzq}
-        <div class="mov-icon">${cfg.icon}</div>
-        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;min-width:34px;margin-right:2px">
-          <div style="font-size:.68rem;color:var(--muted);line-height:1.2;text-align:center">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
-          <div style="font-size:.65rem;color:var(--muted);opacity:.7">${(m.fecha||"").split("/")[2]||""}</div>
-        </div>
-        <div class="mov-info">
-          <div class="mov-tipo">${cfg.label}${m.numero ? " N°" + fmtNumFC(m.numero) : ""} ${badge}</div>
-          <div class="mov-fecha">${m.descripcion || ""}</div>
-          ${vinculo}${vinculoPago}
-        </div>
-        <div style="flex:1;min-width:20px;max-width:80px"></div>
-        <div class="mov-monto ${clsMonto}" style="flex-shrink:0;margin-left:6px;display:flex;align-items:center">${signo}${fmt(m.monto)}</div>
-        <div style="flex-shrink:0;margin-left:12px;padding-left:12px;border-left:1px solid var(--border);text-align:right;min-width:80px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center">
-          <div style="font-size:.65rem;color:var(--muted);margin-bottom:1px">saldo</div>
-          <div style="font-size:.75rem;font-weight:700;color:${saldoColor};font-family:'Syne',sans-serif">${saldoTexto}</div>
-        </div>
-        <div style="display:flex;gap:4px;align-items:center;margin-left:4px">
-          <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-            <span style="font-size:.7rem;color:var(--muted)">🖨️</span>
-            <input type="checkbox" title="Seleccionar para imprimir" ${movsSeleccionados.has(m.id) ? "checked" : ""}
-              onclick="toggleSeleccionado(event,${m.id})"
-              style="accent-color:#f59e0b;cursor:pointer;width:15px;height:15px;flex-shrink:0" />
+      // Badge
+      let badge = "";
+      if (estado === "aprobada") badge = `<span class="badge-aprobada" style="font-size:.6rem;padding:1px 5px">✅</span>`;
+      if (estado === "pagada")   badge = `<span class="badge-pagada" style="font-size:.6rem;padding:1px 5px">💳</span>`;
+
+      // Vínculo pago
+      let vinculoTxt = "";
+      if (estado === "pagada") {
+        const op = getEstados()["fc_op_" + m.id];
+        if (op) vinculoTxt = `<div style="font-size:.65rem;color:var(--muted)">→ ${op.numero ? "OP N°"+op.numero : "OP"}${op.fecha ? " "+op.fecha : ""}</div>`;
+      }
+      if (esPago && fcIdsVinculadas.length) {
+        const movsProv = movimientos[selectedId] || [];
+        const labels = fcIdsVinculadas.map(fid => {
+          const fc = movsProv.find(x => Number(x.id) === Number(fid));
+          return fc?.numero ? fmtNumFC(fc.numero) : "FC";
+        });
+        vinculoTxt = `<div style="font-size:.65rem;color:var(--muted)">→ ${labels.join(", ")}</div>`;
+      }
+
+      const rowBg = estado === "aprobada" ? "rgba(59,130,246,.08)" : estado === "pagada" ? "rgba(34,197,94,.06)" : "";
+      const rowBorder = estado === "aprobada" ? "rgba(59,130,246,.35)" : estado === "pagada" ? "rgba(34,197,94,.3)" : "var(--border)";
+
+      return `<tr id="mov-row-${m.id}" style="background:${rowBg};border-bottom:1px solid var(--border)">
+        <td style="padding:4px 6px;text-align:center;width:24px">${checkIzq}</td>
+        <td style="padding:4px 6px;width:48px;text-align:center">
+          <div style="font-size:.68rem;color:var(--muted);line-height:1.2">${(m.fecha||"").split("/").slice(0,2).join("/")}</div>
+          <div style="font-size:.62rem;color:var(--muted);opacity:.7">${(m.fecha||"").split("/")[2]||""}</div>
+        </td>
+        <td style="padding:4px 8px;font-size:.7rem">${cfg.icon} ${cfg.label}${m.numero ? " N°"+fmtNumFC(m.numero) : ""} ${badge}</td>
+        <td style="padding:4px 8px;font-size:.68rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.descripcion || ""}${vinculoTxt}</td>
+        <td style="padding:4px 10px;text-align:right;width:100px;font-size:.78rem;font-weight:600;color:var(--yellow)">${esDebe ? fmt(m.monto) : ""}</td>
+        <td style="padding:4px 10px;text-align:right;width:100px;font-size:.78rem;font-weight:600;color:var(--green)">${!esDebe ? fmt(m.monto) : ""}</td>
+        <td style="padding:4px 10px;text-align:right;width:100px;font-size:.78rem;font-weight:700;color:${saldoColor};border-left:1px solid var(--border)">${fmt(Math.abs(saldoFila))}</td>
+        <td style="padding:4px 4px;width:90px;text-align:right">
+          <div style="display:inline-flex;align-items:center;gap:2px">
+            <span style="font-size:.65rem;color:var(--muted)">🖨️</span>
+            <input type="checkbox" ${movsSeleccionados.has(m.id) ? "checked" : ""} onclick="toggleSeleccionado(event,${m.id})" style="accent-color:#f59e0b;cursor:pointer;width:13px;height:13px" />
+            ${(estado !== "pagada" || esPago) ? `<button class="mov-delete" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3);padding:2px 5px;font-size:.7rem">✏️</button>` : ""}
+            <button class="mov-delete" onclick="deleteMov(${m.id})" style="padding:2px 5px;font-size:.7rem">×</button>
           </div>
-          ${(estado !== "pagada" || m.tipo === "pago") ? `<button class="mov-delete" title="Editar" onclick="editarMov(${m.id})" style="color:var(--accent2);border-color:rgba(59,130,246,.3)">✏️</button>` : ""}
-          <button class="mov-delete" title="Eliminar" onclick="deleteMov(${m.id})">×</button>
-        </div>
-      </div>`;
+        </td>
+      </tr>`;
     }).join("");
+
+    lista.innerHTML = `<table style="width:100%;border-collapse:collapse;font-family:inherit">
+      <thead style="position:sticky;top:0;z-index:2">
+        <tr style="background:var(--surface2);border-bottom:2px solid var(--border)">
+          <th style="padding:5px 6px;width:24px"></th>
+          <th style="padding:5px 6px;width:48px;font-size:.65rem;color:var(--muted);font-weight:600;text-align:center">FECHA</th>
+          <th style="padding:5px 8px;font-size:.65rem;color:var(--muted);font-weight:600;text-align:left">COMPROBANTE</th>
+          <th style="padding:5px 8px;font-size:.65rem;color:var(--muted);font-weight:600;text-align:left">DESCRIPCIÓN</th>
+          <th style="padding:5px 10px;width:100px;font-size:.65rem;color:var(--yellow);font-weight:600;text-align:right">DEBE</th>
+          <th style="padding:5px 10px;width:100px;font-size:.65rem;color:var(--green);font-weight:600;text-align:right">HABER</th>
+          <th style="padding:5px 10px;width:100px;font-size:.65rem;color:var(--muted);font-weight:600;text-align:right;border-left:1px solid var(--border)">SALDO</th>
+          <th style="padding:5px 4px;width:90px"></th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>`;
 
     actualizarBarra();
   }
